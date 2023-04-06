@@ -1,4 +1,4 @@
-# Health-AI Samples
+# Azure Health AI Services Samples
 
 This repository contains different samples applications and sample code to help you get started with the different Health-AI services.
 Based on these you will learn how to use our products, and accelerate your implementations.
