@@ -91,7 +91,7 @@ namespace TextAnalyticsForHealthAsync_Client
 
                 var finishedResponse = await successfullFhirResponse.Result.Content.ReadAsStringAsync();
                 return new OkObjectResult(finishedResponse);
-            }
+            }   
             return new BadRequestErrorMessageResult("");
         }
     }
