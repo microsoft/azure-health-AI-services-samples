@@ -74,7 +74,7 @@ Before you deploy the pods and service, you need to create 3 secrets.
 
 - Storage Connection String
     ```cli
-    kubectl create secret generic credentialdata --from-literal=YOUR STORAGE CONNECTION STRING
+    kubectl create secret generic credentialdata --from-literal=storageconnectionstring=YOUR STORAGE CONNECTION STRING
     ```
 - Text Analytics for Health API key
     ```cli

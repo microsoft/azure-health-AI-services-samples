@@ -153,6 +153,10 @@
                         {
                             "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
                             "value": "[reference(resourceId('Microsoft.Insights/components', concat(parameters('functionName'), '-insights')), '2020-02-02').InstrumentationKey]"
+                        },
+                         {
+                            "name": "TextAnalyticsSubscriptionKey",
+                            "value": "123"
                         }
                     ]
                 },
