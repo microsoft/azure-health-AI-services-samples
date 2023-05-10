@@ -32,7 +32,7 @@ In the containerized version we recommend to use the following hardware specific
 ## Architecture
 
 The Azure Function recieves and sends documents to the kubernetes cluster. 
-THis sample has been build to make sure the Azure Function and Azure Kubernetes Service can scale based on the user load. 
+This sample has been build to make sure the Azure Function and Azure Kubernetes Service can scale based on the user load. 
 All documents and results will be asynchronous processed and stored on your Azure Storage Account. 
 The processing will increase/decrease based on the number of nodes in your cluster and the Maximum instances
 
