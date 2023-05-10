@@ -1,98 +1,87 @@
+using Azure.AI.TextAnalytics;
+using Azure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Polly;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using Azure.Storage.Blobs;
 using TextAnalyticsForHealthAsync_Client.Models;
+using System.Linq;
+using System.ComponentModel;
+using System.Text;
+using System.Reflection.Metadata;
 
 namespace TextAnalyticsForHealthAsync_Client
 {
+    //https://learn.microsoft.com/en-us/azure/cognitive-services/language-service/concepts/data-limits
     public static class RuntTA4HWorkloadFunction
     {
-        private static readonly string TextAnalyticsEndPoint = "http://localhost:5000/text/analytics/v3.1/entities/health/jobs";
-
+        private static readonly string TextAnalyticsEndPoint = Environment.GetEnvironmentVariable("TextAnalyticsEndPoint");
+        private static readonly string TextAnalyticsSubscriptionKey = Environment.GetEnvironmentVariable("TextAnalyticsSubscriptionKey");
+        private static readonly string OutputStorageConnectionString = Environment.GetEnvironmentVariable("OutputStorageConnectionString"); 
         [FunctionName("RuntTA4HWorkloadFunction")]
         public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
             //Read Document
-            string document = await new StreamReader(req.Body).ReadToEndAsync();
-            if (!string.IsNullOrWhiteSpace(document))
+            string inputString = await new StreamReader(req.Body).ReadToEndAsync();
+            var documentInfoList = JsonConvert.DeserializeObject<List<TextDocumentInput>>(inputString);
+            if(documentInfoList.Count == 0 || !documentInfoList.Where(p => !string.IsNullOrWhiteSpace(p.Text)).Any())
             {
-                //Start Job
-                string operationLocation;
-                using (var httpClient = new HttpClient())
+                return new BadRequestErrorMessageResult("No documents found, please provide minimal 1 document string");
+            }
+
+            if(documentInfoList.Count > 25)
+            {
+                return new BadRequestErrorMessageResult("Batch request contains too many records. Max 25 records are permitted");
+            }
+
+            if(documentInfoList.SelectMany(p => p.Text).Count() > 125000)
+            {
+                return new BadRequestErrorMessageResult("Batch request contains too many records. Max 125 000 characters are allowed");
+            }
+
+            //Process documents through TA4H
+            var documents = documentInfoList.Where(p => !string.IsNullOrWhiteSpace(p.Text));
+            var client = new TextAnalyticsClient(new Uri(TextAnalyticsEndPoint), new AzureKeyCredential(TextAnalyticsSubscriptionKey));
+            AnalyzeHealthcareEntitiesOperation healthOperation = await client.StartAnalyzeHealthcareEntitiesAsync(documents);
+            await healthOperation.WaitForCompletionAsync();
+
+            var blobServiceClient = new BlobServiceClient(OutputStorageConnectionString);
+            string containerName = "healthcareentitiesresults";
+            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+            if (!containerClient.Exists())
+            {
+                containerClient.Create();
+            }
+            await foreach (AnalyzeHealthcareEntitiesResultCollection resultCollection in healthOperation.Value)
+            {
+                foreach (AnalyzeHealthcareEntitiesResult analyzedResult in resultCollection)
                 {
-                    using (var request = new HttpRequestMessage(new HttpMethod("POST"), $"{TextAnalyticsEndPoint}"))
+                    var result = new DocumentResult
                     {
-                        //Define model to send with document data
-                        var requestModel = new AnalysisInput
-                        {
-                            Documents = new List<HealthDocument>
-                                {
-                                   new HealthDocument
-                                   {
-                                       Id = "1",
-                                       Language = "en",
-                                       Text = document
-                                   }
-                                }
-                        };
-                        request.Content = new StringContent(JsonConvert.SerializeObject(requestModel));
-                        request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
-                        var textAnalysisResponse = await httpClient.SendAsync(request);
-                        operationLocation = textAnalysisResponse.Headers.GetValues("operation-location").FirstOrDefault();
+                        Id = analyzedResult.Id,
+                        Text = documentInfoList.First(p => p.Id == analyzedResult.Id).Text,
+                        HealthcareEntitiesResult = analyzedResult.Entities
+                    };
+                    var blobName = new string($"{analyzedResult.Id}_{DateTime.Now.ToString("yyyyMMddHHmmss")}".ToLower().Take(250).ToArray());
+                    BlobClient blobClient = containerClient.GetBlobClient(blobName);
+                    var content = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(result));
+                    using (var ms = new MemoryStream(content))
+                    {
+                        await blobClient.UploadAsync(ms);
                     }
                 }
-                operationLocation = operationLocation.Substring("http://localhost".Length, operationLocation.Length - "http://localhost".Length);
-                operationLocation = "http://localhost:5000" + operationLocation;
-                //Check Job Status and create retry functionality with Polly
-                var max_Retries = 10;
-                var pollyContext = new Context("Retry 202");
-                var retryPolicy = Policy.Handle<HttpRequestException>(ex => ex.Message.Contains("503"))
-                .OrResult<HttpResponseMessage>(r =>
-                {
-                    if (r.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        return false;
-                    }
-                    var tempResponse = r.Content.ReadAsStringAsync().Result;
-                    var textAnalyticsForHealthResponse = JsonConvert.DeserializeObject<TextAnalyticsForHealthResponse>(tempResponse);
-                    return textAnalyticsForHealthResponse.Status != "succeeded";
-                })
-                .WaitAndRetry(retryCount: max_Retries, sleepDurationProvider: (attemptCount) => TimeSpan.FromSeconds(attemptCount * 5),
-                 onRetry: (exception, sleepDuration, attemptNumber, context) =>
-                 {
-                     Console.WriteLine($"{context.OperationKey}: Retry number {attemptNumber} ");
-                 });
+            }
 
-                var successfullFhirResponse = retryPolicy.ExecuteAndCapture(ctx =>
-                {
-                    using (var httpClient = new HttpClient())
-                    {
-                        using (var request = new HttpRequestMessage(new HttpMethod("GET"), operationLocation))
-                        {
-                            var textAnalysisResponse = httpClient.Send(request);
-                            textAnalysisResponse.EnsureSuccessStatusCode();
-                            return textAnalysisResponse;
-                        }
-                    }
-                }, pollyContext);
-
-                var finishedResponse = await successfullFhirResponse.Result.Content.ReadAsStringAsync();
-                return new OkObjectResult(finishedResponse);
-            }   
-            return new BadRequestErrorMessageResult("");
+            return new OkResult();
         }
     }
 }

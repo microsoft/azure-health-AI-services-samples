@@ -67,13 +67,6 @@
                 "description": "The Client Secret that will connect to the FHIR server"
             }
         },
-        "repoUrl": {
-            "type": "string",
-            "defaultValue": "https://github.com/microsoft/azure-health-AI-services-samples.git",
-            "metadata": {
-                "description": "The URL for the GitHub repository that contains the project to deploy."
-            }
-        },
         "functionPackageUrl": {
             "type": "string",
             "defaultValue": "https://github.com/microsoft/azure-health-AI-services-samples/blob/main/samples/intelligent-dashboard-ta4H/text-analytics-for-health-support-functions/function.zip?raw=true",

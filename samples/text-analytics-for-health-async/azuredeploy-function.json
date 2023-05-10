@@ -1,0 +1,163 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "functionAppSku": {
+            "type": "string",
+            "defaultValue": "Y1",
+            "allowedValues": [
+                "Y1"
+            ],
+            "metadata": {
+                "description": "Describes plan's pricing tier"
+            }
+        },
+        "functionName": {
+            "defaultValue": "[concat('ta4h-fhir-vis-', uniqueString(utcNow('F')))]",
+            "type": "String"
+        },
+        "aks-endpoint": {
+            "defaultValue": "http://YOUR.IP.HERE",
+            "type": "String"
+        },
+        "output-storage-connectionString": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "functionPackageUrl": {
+            "type": "string",
+            "defaultValue": "https://github.com/microsoft/azure-health-AI-services-samples/blob/main/samples/intelligent-dashboard-ta4H/text-analytics-for-health-support-functions/function.zip?raw=true",
+            "metadata": {
+                "description": "The URL for the GitHub repository that contains the project to deploy."
+            }
+        }
+    },
+    "variables": {
+        "skuCode": "[parameters('functionAppSku')]",
+        "hostingPlanNameLinux": "[concat('plan-linux-', parameters('functionName'))]",
+        "storageAccountName": "[concat('strg', parameters('functionName'))]",
+        "storageAccount": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2018-07-01",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Insights/components",
+            "apiVersion": "2020-02-02",
+            "name": "[concat(parameters('functionName'), '-insights')]",
+            "location": "[resourceGroup().location]",
+            "kind": "web"
+        },
+        {
+            "apiVersion": "2018-02-01",
+            "name": "[variables('hostingPlanNameLinux')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[resourceGroup().location]",
+            "kind": "linux",
+            "sku": {
+                "Name": "[variables('skuCode')]"
+            },
+            "properties": {
+                "name": "[variables('hostingPlanNameLinux')]",
+                "numberOfWorkers": "1",
+                "reserved": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2022-03-01",
+            "name": "[parameters('functionName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms/', variables('hostingPlanNameLinux'))]"
+            ],
+            "kind": "functionapp",
+            "properties": {
+                "enabled": true,
+                "hostNameSslStates": [
+                    {
+                        "name": "[concat(parameters('functionName'), '.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Standard"
+                    },
+                    {
+                        "name": "[concat(parameters('functionName'), '.scm.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Repository"
+                    }
+                ],
+                "serverFarmId": "[variables('hostingPlanNameLinux')]",
+                "reserved": true,
+                "isXenon": false,
+                "hyperV": false,
+                "vnetRouteAllEnabled": false,
+                "vnetImagePullEnabled": false,
+                "vnetContentShareEnabled": false,
+                "siteConfig": {
+                    "numberOfWorkers": 1,
+                    "linuxFxVersion": "DOTNET|6.0",
+                    "acrUseManagedIdentityCreds": false,
+                    "alwaysOn": false,
+                    "http20Enabled": false,
+                    "functionAppScaleLimit": 200,
+                    "minimumElasticInstanceCount": 0,
+                    "appSettings": [
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccount'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "AzureWebStorageForData",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccount'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "TextAnalyticsEndPoint",
+                            "value": "[parameters('aks-endpoint')]"
+                        },
+                        {
+                            "name": "OutputStorageConnectionString",
+                            "value": "[parameters('output-storage-connectionString')]"
+                        },
+                         {
+                            "name": "UUIDtoResourceTypeConversion",
+                            "value": "false"
+                        },
+                        {
+                            "name": "MaxDegreeOfParallelism",
+                            "value": "16"
+                        },
+                        {
+                            "name": "WEBSITE_MOUNT_ENABLED",
+                            "value": "1"
+                        },
+                        {
+                            "name": "WEBSITE_RUN_FROM_PACKAGE",
+                            "value": "[parameters('functionPackageUrl')]"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~4"
+                        },
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "dotnet"
+                        },
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('Microsoft.Insights/components', concat(variables('hostingPlanNameLinux'), '-insights')), '2020-02-02').InstrumentationKey]"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
