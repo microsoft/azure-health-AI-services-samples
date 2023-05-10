@@ -8,23 +8,23 @@ This setup wil help you provision:
 
 ## Prerequisites
 - An Azure Subscription
-- kubectl 
+- kubectl installed 
 - az CLI installed 
 
 ## Setup TA4H and Azure Storage
 
-Before setting up the Azure Kubernetes Service, you need a Text Analytics for Health Service and an Azure Storage Account.
+Before setting up the Azure Kubernetes Service, you need to deploy aText Analytics for Health Service and an Azure Storage Account.
+
+[![Deploy TA4H and an Azure Storage Account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-services.json)
+
 After creating those resources, you will need to copy the following values:
 - The Text Analytics for Health Endpoint
 - The Text Analytics for Health Api Key
 - The Storage Account connectionstring
 
-!["A screenshot of the TA4H endpoint end key"](/media/text-analytics-for-health-batch-async/ta4h-keys.png)
-
-
 These values will be used below to setup the Azure Kubernetes Service
 
-[![Deploy TA4H and Storage account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-services.json)
+!["A screenshot of the TA4H endpoint end key"](/media/text-analytics-for-health-batch-async/ta4h-keys.png)
 
 
 ## Setup Azure Kubernetes Service
@@ -41,7 +41,7 @@ az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>
 
 ### Setup Azure resources
 
-After you generated your SSH key pair, you can deploy AKS on Azure via the button below.
+After you generated your SSH key pair, you can deploy the Azure Kubernetes Service on Azure via the button below.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-kubernetes.json)
 
@@ -82,17 +82,17 @@ Before you deploy the pods and service, you need to create 3 secrets.
     ```
 - Text Analytics for Health billing endpoint
     ```cli
-    kubectl create secret generic billing-endpoint --from-literal=YOUR API ENDPOINT
+    kubectl create secret generic billing-endpoint --from-literal=billing=YOUR API ENDPOINT
     ```
 
-> [!IMPORTANT] 
+> [!info] 
 > for this sample we are using environment variables to store and consume secrets. For production workloads we recommend to yse an external key store, such as Azure Key Vault. There are plugins into Kubernetes to then mount the secrets. You can find more info [here](https://learn.microsoft.com/en-us/azure/aks/csi-secrets-store-driver)
 
 After setting the secrets, you can now deploy the application using the kubectl apply command:
 
 TA4H.yaml can be found [here](samples\text-analytics-for-health-async\TA4H.yaml).
 ```cli
-kubectl apply -f TA4H.yaml
+kubectl apply -f "https://raw.githubusercontent.com/microsoft/azure-health-AI-services-samples/TA4H-async-blueprint/samples/text-analytics-for-health-async/TA4H.yaml"
 ```
 
 When the deployment is succesfull, you should be seeing the following services
