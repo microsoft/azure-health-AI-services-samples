@@ -1,14 +1,13 @@
 # Text Analytics for Health Container Async Batch Sample
 
-This blueprint provides code examples and best practices on how to use the Text Analytics for Health in a scalable way when you are using the containerized version of the Service.
+This blueprint provides code examples and best practices on how to use the Text Analytics for Health in a scalable way when you are using the containerized version of the service.
 
-The service contains an Azure Function HTTP client application and deployment scripts to setup Text Analytics for Health, an Azure Storage Account and an Azure Kubernetes Service  with several Text Analytics for Health nodes, configured to be used in an asynchronous way. 
+This sample contains an Azure Function HTTP client application and deployment scripts to setup Text Analytics for Health, an Azure Storage Account and an Azure Kubernetes Service with several Text Analytics for Health nodes, all configured to be used in an scalable and asynchronous way. 
 
 
 ## Throughput and hardware recommendation 
 
 Before setting up the sample, it is important to understand the difference between the **hosted** and **containerized** service. 
-
 Text Analytics for Health has a **hosted** and **containerized** version. There is a difference on throughput and limits for these deployment options
 
 ### Throughput recommendations
@@ -21,7 +20,7 @@ Text Analytics for Health has a **hosted** and **containerized** version. There 
 
 ### Harware recommendations
 
-In the containerized version we recommend to use the following specificaitons 
+In the containerized version we recommend to use the following hardware specifications 
 
 | | Minimal | Recommended 
 | ---- | ---- | --- | 
@@ -31,15 +30,28 @@ In the containerized version we recommend to use the following specificaitons
 
 
 ## Architecture
-When completing the steps in this tutorial, you will have an Azure Function that connects to your Azure Kubernetes Cluster that contains one or more Text Analytics for Health pods. 
 
-The Azure Function can scale and will store all results asynchronous on your Azure Storage Account. Based on the number of nodes you want to scale out, you can process more documents per second. 
+The Azure Function recieves and sends documents to the kubernetes cluster. 
+THis sample has been build to make sure the Azure Function and Azure Kubernetes Service can scale based on the user load. 
+All documents and results will be asynchronous processed and stored on your Azure Storage Account. 
+The processing will increase/decrease based on the number of nodes in your cluster and the Maximum instances
 
 !["A diagram of the Intelligent dashboard architecture"](/media/text-analytics-for-health-batch-async/architecture.jpg)
 
 ## Setup the sample
 
-A step by step guide has been created [here](Setup.md) to setup the needed resources.
+The setup wil help you provision: 
+- Text Analytics for Health
+- Azure Storage Account
+- Azure Kubernetes Service 
+- Azure Function.
+
+## Prerequisites
+- An Azure Subscription
+- kubectl 
+- az CLI installed 
+
+Click [here](Setup.md) to setup the needed resources.
 
 ## Using the sample
 

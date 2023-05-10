@@ -1,6 +1,6 @@
 # Text Analytics for Health Container Async Batch Sample Setup
 
-This tutorial wil help you install: 
+This setup wil help you provision: 
 - Text Analytics for Health
 - Azure Storage Account
 - Azure Kubernetes Service 
@@ -13,15 +13,16 @@ This tutorial wil help you install:
 
 ## Setup TA4H and Azure Storage
 
-Before setting up the Azure Kubernetes Service, you need a Text Analytics for Health Service and a storage account.
-After creating those 2 resources, you will need to copy the following values:
+Before setting up the Azure Kubernetes Service, you need a Text Analytics for Health Service and an Azure Storage Account.
+After creating those resources, you will need to copy the following values:
 - The Text Analytics for Health Endpoint
 - The Text Analytics for Health Api Key
 - The Storage Account connectionstring
 
-These values will be used below to setup the Azure Kubernetes Service
+!["A screenshot of the TA4H endpoint end key"](/media/text-analytics-for-health-batch-async/ta4h-keys.png)
 
-Deploy TA4H and Storage account to Azure
+
+These values will be used below to setup the Azure Kubernetes Service
 
 [![Deploy TA4H and Storage account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-services.json)
 
@@ -30,9 +31,7 @@ Deploy TA4H and Storage account to Azure
 
 ### Create an SSH key pair
 
-To access AKS nodes, you connect using an SSH key pair (public and private), which you generate using the ssh-keygen command. By default, these files are created in the ~/.ssh directory. Running the ssh-keygen command will overwrite any SSH key pair with the same name already existing in the given location.
-
-Before selecting the Deploy to Azure button, please ensure that a resource group and a SSH key for Azure has been created. You can create both by running the commands shown below in the Azure CLI or by using the Azure Portal.
+To access AKS nodes, you need to connect using an SSH key pair (public and private), which you generate using the ssh-keygen command. Before selecting the Deploy to Azure button, please ensure that a resource group and a SSH key for Azure has been created. You can create an SSH key by running the command shown below in the Azure CLI or by using the Azure Portal.
 
 ```
 az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>"
@@ -42,12 +41,12 @@ az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>
 
 ### Setup Azure resources
 
-After you created your new SSH key pair, you can deploy AKS on Azure via the button below.
+After you generated your SSH key pair, you can deploy AKS on Azure via the button below.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-kubernetes.json)
 
 
-### Connect to the cluster
+## Connect to the cluster
 
 If you don't have kubectl isntalled, you can install kubectl locally using the az aks install-cli command:
 ```cli
@@ -66,10 +65,10 @@ Verify the connection to your cluster using the kubectl get command. This comman
 kubectl get services
 ```
 
-### Deploy the TA4H container to the cluster
+## Deploy the TA4H container to the cluster
 
-When your AKS has been deployed, we need to deploy the pods and services.
-Before you can deploy the yaml, you will need to create 3 secrets.
+When your cluster has been provisioned, we need to deploy the pods and services.
+Before you deploy the pods and service, you need to create 3 secrets.
 
 **Don't surround the secrets with quotes, as this will give errors.**
 
@@ -89,7 +88,7 @@ Before you can deploy the yaml, you will need to create 3 secrets.
 > [!IMPORTANT] 
 > for this sample we are using environment variables to store and consume secrets. For production workloads we recommend to yse an external key store, such as Azure Key Vault. There are plugins into Kubernetes to then mount the secrets. You can find more info [here](https://learn.microsoft.com/en-us/azure/aks/csi-secrets-store-driver)
 
-After setting the variables, you can deploy the application using the kubectl apply command and specify the name of your YAML manifest:
+After setting the secrets, you can now deploy the application using the kubectl apply command:
 
 TA4H.yaml can be found [here](samples\text-analytics-for-health-async\TA4H.yaml).
 ```cli
@@ -109,7 +108,7 @@ You will need to have your Azure Kubenernetes service External IP to provide in 
 ## Deploy the Azure Function
 
 The last step is to deploy the Client Function. This function will recieve the documents and send them to your cluster. 
-Copye your external cluster ip and the storage connection string  you used as a secret in the cluster. 
+Copy your External load balancer IP, as you will need this in the deployment below
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-function.json)
 
