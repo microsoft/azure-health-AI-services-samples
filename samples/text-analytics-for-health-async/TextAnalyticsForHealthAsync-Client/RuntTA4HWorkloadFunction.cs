@@ -24,7 +24,7 @@ namespace TextAnalyticsForHealthAsync_Client
     public static class RuntTA4HWorkloadFunction
     {
         private static readonly string TextAnalyticsEndPoint = Environment.GetEnvironmentVariable("TextAnalyticsEndPoint");
-        private static readonly string TextAnalyticsSubscriptionKey = Environment.GetEnvironmentVariable("TextAnalyticsSubscriptionKey");
+        private static string TextAnalyticsSubscriptionKey = Environment.GetEnvironmentVariable("TextAnalyticsSubscriptionKey");
         private static readonly string OutputStorageConnectionString = Environment.GetEnvironmentVariable("OutputStorageConnectionString"); 
         [FunctionName("RuntTA4HWorkloadFunction")]
         public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
@@ -50,6 +50,10 @@ namespace TextAnalyticsForHealthAsync_Client
 
             //Process documents through TA4H
             var documents = documentInfoList.Where(p => !string.IsNullOrWhiteSpace(p.Text));
+            if (string.IsNullOrWhiteSpace(TextAnalyticsSubscriptionKey))
+            {
+                TextAnalyticsSubscriptionKey = "";
+            }
             var client = new TextAnalyticsClient(new Uri(TextAnalyticsEndPoint), new AzureKeyCredential(TextAnalyticsSubscriptionKey));
             AnalyzeHealthcareEntitiesOperation healthOperation = await client.StartAnalyzeHealthcareEntitiesAsync(documents);
             await healthOperation.WaitForCompletionAsync();

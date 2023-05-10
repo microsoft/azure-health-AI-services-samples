@@ -16,6 +16,10 @@
             "defaultValue": "",
             "type": "String"
         },
+        "storageAccountName": {
+            "defaultValue": "",
+            "type": "String"
+        },
         "aks-endpoint": {
             "defaultValue": "http://YOUR.IP.HERE",
             "type": "String"
@@ -31,13 +35,12 @@
     "variables": {
         "skuCode": "[parameters('functionAppSku')]",
         "hostingPlanNameLinux": "[concat('plan-linux-', parameters('functionName'))]",
-        "storageAccountName": "[concat('strg', parameters('functionName'))]",
-        "storageAccount": "[resourceId('Microsoft.Storage/storageAccounts', concat('strg', parameters('functionName')))]"
+        "storageAccount": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
     },
     "resources": [
         {
             "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('storageAccountName')]",
+            "name": "[parameters('storageAccountName')]",
             "location": "[resourceGroup().location]",
             "apiVersion": "2018-07-01",
             "sku": {
@@ -51,7 +54,11 @@
             "apiVersion": "2020-02-02",
             "name": "[concat(parameters('functionName'), '-insights')]",
             "location": "[resourceGroup().location]",
-            "kind": "web"
+            "kind": "web",
+            "properties": {
+              "Application_Type": "web",
+              "Request_Source": "rest"
+            }
         },
         {
             "apiVersion": "2018-02-01",
@@ -109,11 +116,11 @@
                     "appSettings": [
                         {
                             "name": "AzureWebJobsStorage",
-                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccount'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccount'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
                         },
                         {
                             "name": "OutputStorageConnectionString",
-                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccount'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccount'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
                         },
                         {
                             "name": "TextAnalyticsEndPoint",
@@ -145,10 +152,19 @@
                         },
                         {
                             "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-                            "value": "[reference(resourceId('Microsoft.Insights/components', concat(variables('hostingPlanNameLinux'), '-insights')), '2020-02-02').InstrumentationKey]"
+                            "value": "[reference(resourceId('Microsoft.Insights/components', concat(parameters('functionName'), '-insights')), '2020-02-02').InstrumentationKey]"
                         }
                     ]
-                }
+                },
+                "scmSiteAlsoStopped": false,
+                "clientAffinityEnabled": false,
+                "clientCertEnabled": false,
+                "clientCertMode": "Required",
+                "hostNamesDisabled": false,
+                "httpsOnly": true,
+                "redundancyMode": "None",
+                "storageAccountRequired": false,
+                "keyVaultReferenceIdentity": "SystemAssigned"
             }
         }
     ]

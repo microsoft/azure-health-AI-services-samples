@@ -312,7 +312,7 @@
             "kind": "web",
             "properties": {
               "Application_Type": "web",
-              "Request_Source": "IbizaWebAppExtensionCreate"
+              "Request_Source": "rest"
             }
         },
         {
