@@ -105,7 +105,7 @@ kubectl get services
 
 You will need to have your Azure Kubenernetes service External IP to provide in the deployment below.
 
-## Deploy the Azure Function
+## Deploy the client applicaton to the Azure Function
 
 The last step is to deploy the Client Function. This function will recieve the documents and send them to your cluster. 
 Copy your External load balancer IP, as you will need this in the deployment below
