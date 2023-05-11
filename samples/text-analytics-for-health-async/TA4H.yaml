@@ -99,3 +99,4 @@ spec:
     kind: Deployment
     name: ta4h-deployment
   targetCPUUtilizationPercentage: 60 
+  targetMemoryUtilizationPercentage: 60
