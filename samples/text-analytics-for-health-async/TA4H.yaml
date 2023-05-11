@@ -86,3 +86,16 @@ spec:
     targetPort: 5000
   selector:
     app: ta4h-deployment
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ta4h-hpa
+spec:
+  maxReplicas: 10 
+  minReplicas: 1  
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ta4h-deployment
+  targetCPUUtilizationPercentage: 60 
