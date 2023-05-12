@@ -22,7 +22,6 @@ using System.Xml.Linq;
 
 namespace TextAnalyticsForHealthAsync_Client
 {
-    //https://learn.microsoft.com/en-us/azure/cognitive-services/language-service/concepts/data-limits
     public static class RuntTA4HWorkloadFunction
     {
         private static readonly string TextAnalyticsEndPoint = Environment.GetEnvironmentVariable("TextAnalyticsEndPoint");

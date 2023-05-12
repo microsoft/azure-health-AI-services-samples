@@ -17,7 +17,7 @@ Console.WriteLine(await response.Content.ReadAsStringAsync());
 
 
 ```cURL
-curl --location 'https://function-ta4h-test.azurewebsites.net/api/RuntTA4HWorkloadFunction?code=QT3_Lcgr0U-G66H2fIbogv5o4NrNpA9secMxgOydt3JmAzFuQk1eKQ%3D%3D' \
+curl --location 'https://function-ta4h-test.azurewebsites.net/api/RuntTA4HWorkloadFunction?code' \
 --header 'Content-Type: application/json' \
 --data '[
     {
