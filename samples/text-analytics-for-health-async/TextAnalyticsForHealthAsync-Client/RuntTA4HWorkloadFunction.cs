@@ -17,6 +17,8 @@ using System.Linq;
 using System.ComponentModel;
 using System.Text;
 using System.Reflection.Metadata;
+using Microsoft.Azure.WebJobs.Extensions.DurableTask;
+using System.Xml.Linq;
 
 namespace TextAnalyticsForHealthAsync_Client
 {
@@ -28,7 +30,7 @@ namespace TextAnalyticsForHealthAsync_Client
         private static readonly string OutputStorageConnectionString = Environment.GetEnvironmentVariable("OutputStorageConnectionString"); 
         [FunctionName("RuntTA4HWorkloadFunction")]
         public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
-            ILogger log)
+                 [DurableClient] IDurableOrchestrationClient starter, ILogger log)
         {
             //Read Document
             string inputString = await new StreamReader(req.Body).ReadToEndAsync();
@@ -37,7 +39,6 @@ namespace TextAnalyticsForHealthAsync_Client
             {
                 return new BadRequestErrorMessageResult("No documents found, please provide minimal 1 document string");
             }
-
             if(documentInfoList.Count > 25)
             {
                 return new BadRequestErrorMessageResult("Batch request contains too many records. Max 25 records are permitted");
@@ -48,14 +49,27 @@ namespace TextAnalyticsForHealthAsync_Client
                 return new BadRequestErrorMessageResult("Batch request contains too many records. Max 125 000 characters are allowed");
             }
 
-            //Process documents through TA4H
             var documents = documentInfoList.Where(p => !string.IsNullOrWhiteSpace(p.Text));
-            if (string.IsNullOrWhiteSpace(TextAnalyticsSubscriptionKey))
+            string instanceId = await starter.StartNewAsync("ProcessDocumentFunction", documents);
+            log.LogInformation("Started orchestration with ID = '{instanceId}'.", instanceId);
+            return starter.CreateCheckStatusResponse(req, instanceId);
+        }
+
+        [FunctionName("ProcessDocumentFunction")]
+        public static async Task RunOrchestrator([OrchestrationTrigger] IDurableOrchestrationContext context)
+        {
+            var documents = context.GetInput<List<TextDocumentInput>>();
+            foreach (var document in documents)
             {
-                TextAnalyticsSubscriptionKey = "";
+                await context.CallActivityAsync(nameof(ProcessDocument), document);
             }
+        }
+
+        [FunctionName(nameof(ProcessDocument))]
+        public static async Task ProcessDocument([ActivityTrigger] TextDocumentInput document, ILogger log)
+        {
             var client = new TextAnalyticsClient(new Uri(TextAnalyticsEndPoint), new AzureKeyCredential(TextAnalyticsSubscriptionKey));
-            AnalyzeHealthcareEntitiesOperation healthOperation = await client.StartAnalyzeHealthcareEntitiesAsync(documents);
+            AnalyzeHealthcareEntitiesOperation healthOperation = await client.StartAnalyzeHealthcareEntitiesAsync(new List<TextDocumentInput> { document });
             await healthOperation.WaitForCompletionAsync();
 
             var blobServiceClient = new BlobServiceClient(OutputStorageConnectionString);
@@ -72,7 +86,7 @@ namespace TextAnalyticsForHealthAsync_Client
                     var result = new DocumentResult
                     {
                         Id = analyzedResult.Id,
-                        Text = documentInfoList.First(p => p.Id == analyzedResult.Id).Text,
+                        Text = document.Text,
                         HealthcareEntitiesResult = analyzedResult.Entities
                     };
                     var blobName = new string($"{analyzedResult.Id}_{DateTime.Now.ToString("yyyyMMddHHmmss")}".ToLower().Take(250).ToArray());
@@ -84,8 +98,6 @@ namespace TextAnalyticsForHealthAsync_Client
                     }
                 }
             }
-
-            return new OkResult();
         }
     }
 }

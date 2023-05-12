@@ -11,11 +11,11 @@ This setup wil help you provision:
 - kubectl installed 
 - az CLI installed 
 
-## Setup TA4H and Azure Storage
+## Setup Azure Kubernetes, Text Analytics for Health and Storage Account
 
-Before setting up the Azure Kubernetes Service, you need to deploy aText Analytics for Health Service and an Azure Storage Account.
+Let's start by setting up your Azure Kubernetes Cluster, Text Analytics for Health and Storage Account.
 
-[![Deploy TA4H and an Azure Storage Account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-services.json)
+[![Deploy TA4H and an Azure Storage Account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-kubernetes-and-services.json)
 
 After creating those resources, you will need to copy the following values:
 - The Text Analytics for Health Endpoint
@@ -27,7 +27,7 @@ These values will be used below to setup the Azure Kubernetes Service
 !["A screenshot of the TA4H endpoint end key"](/media/text-analytics-for-health-batch-async/ta4h-keys.png)
 
 
-## Setup Azure Kubernetes Service
+## Configure Azure Kubernetes Service
 
 ### Create an SSH key pair
 
@@ -39,16 +39,10 @@ az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>
 
 !["A screenshot that shows how to generate the ssh key"](/media/text-analytics-for-health-batch-async/ssh.png)
 
-### Setup Azure resources
-
-After you generated your SSH key pair, you can deploy the Azure Kubernetes Service on Azure via the button below.
-
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-kubernetes.json)
-
-
 ## Connect to the cluster
 
-If you don't have kubectl isntalled, you can install kubectl locally using the az aks install-cli command:
+After you generated your SSH key pair, you can connect to your Azure Kubernetes Service.
+For this you need kubectl, if you don't have kubectl isntalled, you can install kubectl locally using the az aks install-cli command:
 ```cli
 az aks install-cli
 ```
