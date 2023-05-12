@@ -2,11 +2,12 @@
   "version": "2.0",
   "extensions": {
     "http": {
-      "maxOutstandingRequests": 200,
+      "maxOutstandingRequests": 300,
       "maxConcurrentRequests": 100,
       "dynamicThrottlesEnabled": true
     }
   },
+  "functionTimeout": "00:10:00",
   "logging": {
     "applicationInsights": {
       "samplingSettings": {

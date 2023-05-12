@@ -112,3 +112,7 @@ Copy your External load balancer IP, as you will need this in the deployment bel
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-function.json)
 
+
+## Using the sample
+
+You can find all the relevant information on how to use the sampel [here](Usage.md)
