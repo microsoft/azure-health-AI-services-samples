@@ -1,6 +1,6 @@
 # Text Analytics for Health Container Async Batch Usage
 
-To start interacting with the cluster you can send HTTP requests, up to 25 documents, with a max of 125 000 characters in total, per request to the Azure Function.
+To start interacting with the cluster you can send HTTP POST requests, (up to 25 documents, with a max of 125 000 characters in total) to the Azure Function.
 You do this by sending one or more HTTP POST requests to the Client Azure Function
 
 A C# and Curl Example can be found below 
@@ -45,6 +45,8 @@ the payload of the message is a JSON object that contains an `id` and `text` pro
     }
 ]
 ``` 
+
+You can also find an example client .Net Core Console application [here](/samples/text-analytics-for-health-async/StressTestConsoleClient/) 
 
 You can, but don't need to wait on the response of the HTTP request.
 When the function has rocessed the documents, every documents and associated results will be stored on your storage account. 

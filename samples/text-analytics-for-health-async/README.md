@@ -1,9 +1,14 @@
 # Text Analytics for Health Container Async Batch Sample
 
-This blueprint provides code examples and best practices on how to use the Text Analytics for Health in a scalable way when you are using the containerized version of the service.
+This sample provides code examples and best practices on how to use the containerized version of Text Analytics for Health in a scalable way.
 
-This sample contains an Azure Function HTTP client application and deployment scripts to setup Text Analytics for Health, an Azure Storage Account and an Azure Kubernetes Service with several Text Analytics for Health nodes, all configured to be used in an scalable and asynchronous way. 
+After completing the tutorial you will have: 
+- A .Net Core console application to help you stress test the service.
+- An Azure Function HTTP client application that recevies and transforms incoming requests.
+- A Kubernetes cluster that can scale and with one or many Text Analytics for Health Nodes.
+- Several supporting services such as storage accounts, Queues, ... 
 
+All these examples can be setup through a guided tutorial with several deployment scripts. With the goal to be used in an scalable and asynchronous way. 
 
 ## Throughput and hardware recommendation 
 
@@ -44,7 +49,7 @@ The setup wil help you provision:
 - Text Analytics for Health
 - Azure Storage Account
 - Azure Kubernetes Service 
-- Azure Function.
+- Azure Function with supporting services.
 
 ## Prerequisites
 - An Azure Subscription

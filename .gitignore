@@ -2,3 +2,6 @@
 /samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/bin/Debug/net6.0
 /samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/obj
 /samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/Properties/PublishProfiles
+/samples/text-analytics-for-health-async/StressTestConsoleClient/.vs
+/samples/text-analytics-for-health-async/StressTestConsoleClient/bin
+/samples/text-analytics-for-health-async/StressTestConsoleClient/obj
