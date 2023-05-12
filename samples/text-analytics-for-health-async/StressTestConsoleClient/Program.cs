@@ -10,7 +10,7 @@ namespace StressTestConsoleClient
     {
         static async Task Main(string[] args)
         {
-            var endpoint = "https://YOURFUNCTION.azurewebsites.net/api/RuntTA4HWorkloadFunction";
+            var endpoint = "https://berttesttafh.azurewebsites.net/api/RuntTA4HWorkloadFunction?code=cB-oGhSrLlixfhow8wYIDXqIWpvV3c_sLuclJdeWZEXLAzFu2maqBg==";
             Console.WriteLine("How many iterations do you want send to the endpoint?");
             var numberOfIterations = 100;
             int.TryParse(Console.ReadLine(), out numberOfIterations);

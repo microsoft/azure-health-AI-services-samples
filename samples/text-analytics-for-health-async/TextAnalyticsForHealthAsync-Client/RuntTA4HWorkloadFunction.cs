@@ -39,16 +39,6 @@ namespace TextAnalyticsForHealthAsync_Client
             {
                 return new BadRequestErrorMessageResult("No documents found, please provide minimal 1 document string");
             }
-            if(documentInfoList.Count > 25)
-            {
-                return new BadRequestErrorMessageResult("Batch request contains too many records. Max 25 records are permitted");
-            }
-
-            if(documentInfoList.SelectMany(p => p.Text).Count() > 125000)
-            {
-                return new BadRequestErrorMessageResult("Batch request contains too many records. Max 125 000 characters are allowed");
-            }
-
             var documents = documentInfoList.Where(p => !string.IsNullOrWhiteSpace(p.Text));
             string instanceId = await starter.StartNewAsync("ProcessDocumentFunction", documents);
             log.LogInformation("Started orchestration with ID = '{instanceId}'.", instanceId);
@@ -89,7 +79,7 @@ namespace TextAnalyticsForHealthAsync_Client
                         Text = document.Text,
                         HealthcareEntitiesResult = analyzedResult.Entities
                     };
-                    var blobName = new string($"{analyzedResult.Id}_{DateTime.Now.ToString("yyyyMMddHHmmss")}".ToLower().Take(250).ToArray());
+                    var blobName = new string($"{document.Id}_{DateTime.Now.ToString("yyyyMMddHHmmss")}.json".ToLower().Take(250).ToArray());
                     BlobClient blobClient = containerClient.GetBlobClient(blobName);
                     var content = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(result));
                     using (var ms = new MemoryStream(content))
