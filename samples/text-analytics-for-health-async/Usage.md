@@ -1,63 +1,35 @@
 # Text Analytics for Health Container Async Batch Usage
 
-To start interacting with the cluster you can send HTTP POST requests, (up to 25 documents, with a max of 125 000 characters in total) to the Azure Function.
-You do this by sending one or more HTTP POST requests to the Client Azure Function
+This samples uses a [.Net Core Console Application](/samples/text-analytics-for-health-async/StressTestConsoleClient/) and Azure Functions to recieve and propogate messages to the Azure Kubernetes Cluster. 
+This enables scaling and status follow-up. To enable background jobs we are using Durable Functions, more specifically we are using the Async HTTP API pattern.
 
-A C# and Curl Example can be found below 
+With this setup you can use the scalability of Azure functions to automatically scale out based on incoming requests. You can read more on Azure Functions scaling [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-scale). 
 
-```C#
-var client = new HttpClient();
-var request = new HttpRequestMessage(HttpMethod.Post, "https://function-YOUR-FUNCTION-NAME.azurewebsites.net/api/RuntTA4HWorkloadFunction?code=Q==");
-var content = new StringContent("[\r\n    {\r\n        \"id\": \"1\",\r\n        \"text\": \"The patient is taking Metformin 500mg daily for diabetes\"\r\n    },\r\n    {\r\n        \"id\": \"2\",\r\n        \"text\":   \"The patient has been diagnosed with hypertension and is taking Amlodipine 5mg daily\"\r\n    }\r\n]", null, "application/json");
-request.Content = content;
-var response = await client.SendAsync(request);
-response.EnsureSuccessStatusCode();
-Console.WriteLine(await response.Content.ReadAsStringAsync());
-```
+!["Diagram of the Async HTTP Apis for Azure Functions"](https://learn.microsoft.com/en-us/azure/azure-functions/durable/media/durable-functions-concepts/async-http-api.png)
 
 
-```cURL
-curl --location 'https://function-ta4h-test.azurewebsites.net/api/RuntTA4HWorkloadFunction?code' \
---header 'Content-Type: application/json' \
---data '[
-    {
-        "id": "1",
-        "text": "The patient is taking Metformin 500mg daily for diabetes"
-    },
-    {
-        "id": "2",
-        "text":   "The patient has been diagnosed with hypertension and is taking Amlodipine 5mg daily"
-    }
-]'
-```
+The client setup architecture can be found below:
 
-the payload of the message is a JSON object that contains an `id` and `text` property
+!["Diagram of the client sample setup"](../../media/text-analytics-for-health-batch-async/client-architecture.png)
 
-```JSON
-[
-    {
-        "id": "1",
-        "text": "The patient is taking Metformin 500mg daily for diabetes"
-    },
-    {
-        "id": "2",
-        "text":   "The patient has been diagnosed with hypertension and is taking Amlodipine 5mg daily"
-    }
-]
-``` 
+## Start using the sample
 
-You can also find an example client .Net Core Console application [here](/samples/text-analytics-for-health-async/StressTestConsoleClient/) 
+To start interacting with the cluster you need to send on or more HTTP POST requests to your Azure Function. For every request you can send up to 25 documents, with a max of 125 000 characters in total, to the Azure Function.
+The console application contains several generated patient documents that you can use to test the endpoints. 
 
-You can, but don't need to wait on the response of the HTTP request.
-When the function has rocessed the documents, every documents and associated results will be stored on your storage account. 
-For every document in your request, there will be a seperate file. 
-All results are stored in a container named `healthcareentitiesresults` on the storage account defined when creating your Azure Function.
-The naming convention of the file is the current DateTime followed with an underscore and the `id` of the document 
+When starting the [.Net Core Console Application](/samples/text-analytics-for-health-async/StressTestConsoleClient/) you will need to provide the number of requests and documents you want to send to the cluster.
+
+!["Screenshot of the .Net Core Application with the number of requests and documents"](../../media/text-analytics-for-health-batch-async/client-console-application.png)
+
+The client .Net Core application also starts polling the Function to validate if the job succeeded or failed. 
+
+All processed documents will be automatically stored on the storage account you provided when setting up the client application. For every document send to the Function, there will be a dedidcated JSON file with the original document and the results. All results are stored in a container named `healthcareentitiesresults`, the naming convention of the file is the current DateTime followed with an underscore and the `id` of the document 
 
 !["A screenshot of storage account container"](/media/text-analytics-for-health-batch-async/storage-account-container.png)
 
-every file should contain the following structure
 
+## JSON result structure
+Every file on your Azure Storage Accountshould contain the following structure
 
 ```JSON
 {
