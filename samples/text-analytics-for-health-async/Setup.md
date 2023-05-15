@@ -13,7 +13,19 @@ This setup wil help you provision:
 
 ## Setup Azure Kubernetes, Text Analytics for Health and Storage Account
 
-Let's start by setting up your Azure Kubernetes Cluster, Text Analytics for Health and Storage Account.
+### Create an SSH key pair
+
+To access AKS nodes, you need to connect using an SSH key pair (public and private), which you generate using the ssh-keygen command. Before selecting the Deploy to Azure button, please ensure that a resource group and a SSH key for Azure has been created. You can create an SSH key by running the command shown below in the Azure CLI or by using the Azure Portal.
+
+```
+az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>"
+```
+
+!["A screenshot that shows how to generate the ssh key"](/media/text-analytics-for-health-batch-async/ssh.png)
+
+### Setup Azure Resources
+
+When you have your SSH Key, you can setup your Azure Kubernetes Cluster, Text Analytics for Health and Storage Account.
 
 [![Deploy TA4H and an Azure Storage Account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Ftext-analytics-for-health-async%2Fazuredeploy-kubernetes-and-services.json)
 
@@ -29,17 +41,9 @@ These values will be used below to setup the Azure Kubernetes Service
 
 ## Configure Azure Kubernetes Service
 
-### Create an SSH key pair
+When your cluster is provisioned, you can deploy the containers, configure the load balancer and setup the scaling rules.
 
-To access AKS nodes, you need to connect using an SSH key pair (public and private), which you generate using the ssh-keygen command. Before selecting the Deploy to Azure button, please ensure that a resource group and a SSH key for Azure has been created. You can create an SSH key by running the command shown below in the Azure CLI or by using the Azure Portal.
-
-```
-az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>"
-```
-
-!["A screenshot that shows how to generate the ssh key"](/media/text-analytics-for-health-batch-async/ssh.png)
-
-## Connect to the cluster
+### Connect to the cluster
 
 After you generated your SSH key pair, you can connect to your Azure Kubernetes Service.
 For this you need kubectl, if you don't have kubectl isntalled, you can install kubectl locally using the az aks install-cli command:
@@ -59,7 +63,7 @@ Verify the connection to your cluster using the kubectl get command. This comman
 kubectl get services
 ```
 
-## Deploy the TA4H container to the cluster
+### Deploy the TA4H container to the cluster
 
 When your cluster has been provisioned, we need to deploy the pods and services.
 Before you deploy the pods and service, you need to create 3 secrets.
@@ -79,8 +83,8 @@ Before you deploy the pods and service, you need to create 3 secrets.
     kubectl create secret generic billing-endpoint --from-literal=billing=YOUR API ENDPOINT
     ```
 
-> [!info] 
-> for this sample we are using environment variables to store and consume secrets. For production workloads we recommend to yse an external key store, such as Azure Key Vault. There are plugins into Kubernetes to then mount the secrets. You can find more info [here](https://learn.microsoft.com/en-us/azure/aks/csi-secrets-store-driver)
+> **Note**
+> For this sample we are using environment variables to store and consume secrets. For production workloads we recommend to use an external key store, such as Azure Key Vault. There are plugins into Kubernetes to then mount the secrets. You can find more info [here](https://learn.microsoft.com/en-us/azure/aks/csi-secrets-store-driver)
 
 After setting the secrets, you can now deploy the application using the kubectl apply command:
 
