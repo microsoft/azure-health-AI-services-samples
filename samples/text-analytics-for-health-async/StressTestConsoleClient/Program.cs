@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using StressTestConsoleClient.models;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -10,7 +11,7 @@ namespace StressTestConsoleClient
 {
     class Program
     {
-        private static List<DocumentStatus> _documentStatuses = new List<DocumentStatus>();
+        private static ConcurrentBag<DocumentStatus> _documentStatuses = new ConcurrentBag<DocumentStatus>();
 
         static async Task Main(string[] args)
         {
@@ -37,10 +38,10 @@ namespace StressTestConsoleClient
                     documents.Add(new DocumentPayload { Id = $"{Guid.NewGuid()}", Text = testDocuments[rnd.Next(1, 11)] });
                 }
                 tasks.Add(SendPostRequest(client, endpoint, JsonConvert.SerializeObject(documents)));
-                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Number of documents send: {i +1}");
+                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Number of request send: {i +1}");
             }
             await Task.WhenAll(tasks);
-            Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Start fetching statuses");
+            Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Found {_documentStatuses.Count} requests, Start fetching statuses");
             await CheckResponseStatus(stopwatch);
         }
 
@@ -49,13 +50,14 @@ namespace StressTestConsoleClient
             var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
             while (await periodicTimer.WaitForNextTickAsync())
             {
-                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Successfully processed {_documentStatuses.Count(p => p.Finished)} documents, checking status of {_documentStatuses.Count(p => !p.Finished)} documents");
+                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Successfully processed {_documentStatuses.Count(p => p.Finished)} requests, checking status of {_documentStatuses.Count(p => !p.Finished)} requests");
                 using var client = new HttpClient();
                 foreach (var item in _documentStatuses.Where(p => !p.Finished))
                 {
                     using (var cts = new CancellationTokenSource(new TimeSpan(0, 5, 0)))
                     {
                         var response = await client.GetAsync(item.StatusQueryGetUri);
+                        response.EnsureSuccessStatusCode();
                         var responseContent = await response.Content.ReadAsStringAsync();
                         var statusInfo = JsonConvert.DeserializeObject<DurableAzureFunctionStatus>(responseContent);
                         if(statusInfo.RuntimeStatus == RuntimeStatus.Completed)
@@ -69,7 +71,7 @@ namespace StressTestConsoleClient
                         {
                             item.Error = true;
                             item.ErrorMessage = statusInfo.Output;
-                            Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Error for document with id {statusInfo.FunctionInput.First().Id}. ErrorMessage: {statusInfo.Output}");
+                            Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Error for request with InstanceId}} {statusInfo.InstanceId}. ErrorMessage: {statusInfo.Output}");
                         }
                         else if(item.CheckedCount > 30)
                         {
@@ -79,11 +81,11 @@ namespace StressTestConsoleClient
                     }
                 }
 
-                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Successfully processed {_documentStatuses.Count(p => p.Finished)} documents, checking status of {_documentStatuses.Count(p => !p.Finished)} documents");
+                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Successfully processed {_documentStatuses.Count(p => p.Finished)} requests, checking status of {_documentStatuses.Count(p => !p.Finished)} requests");
                 if ((_documentStatuses.Count(p => p.Finished) + _documentStatuses.Count(p => p.Error)) == _documentStatuses.Count)
                 {
                     periodicTimer.Dispose();
-                    Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Finished processing {_documentStatuses.Count(p => !p.Finished)} documents");
+                    Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Finished processing {_documentStatuses.Count(p => !p.Finished)} requests");
                 }
             }
         }
@@ -93,8 +95,15 @@ namespace StressTestConsoleClient
             {
                 var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(endpoint, content);
-                var responseContent = await response.Content.ReadAsStringAsync();
-                _documentStatuses.Add(JsonConvert.DeserializeObject<DocumentStatus>(responseContent));
+                if(response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _documentStatuses.Add(JsonConvert.DeserializeObject<DocumentStatus>(responseContent));
+                }
+                else
+                {
+                    throw new ArgumentException($"No Response Found: {response.StatusCode}");
+                }
             }
         }
 
