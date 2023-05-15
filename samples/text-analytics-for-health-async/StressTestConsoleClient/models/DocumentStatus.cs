@@ -27,6 +27,7 @@ namespace StressTestConsoleClient.models
         public string ResumePostUri { get; set; }
         public bool Finished { get;set; }
         public bool Error { get; set; }
+        public int CheckedCount { get; set; }
         public string ErrorMessage { get; set; }
     }
 }

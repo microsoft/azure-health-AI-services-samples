@@ -15,8 +15,7 @@ namespace StressTestConsoleClient
         static async Task Main(string[] args)
         {
             var stopwatch = new Stopwatch();
-            stopwatch.Start();
-            var endpoint = "http://localhost:7090/api/RuntTA4HWorkloadFunction";
+            var endpoint = "https://ta4hclientapp.azurewebsites.net/api/RuntTA4HWorkloadFunction?code=-";
             Console.WriteLine("How many iterations do you want send to the endpoint?");
             var numberOfIterations = 100;
             int.TryParse(Console.ReadLine(), out numberOfIterations);
@@ -28,6 +27,7 @@ namespace StressTestConsoleClient
             client.Timeout = new TimeSpan(0,5,0);
             var testDocuments = GetAllTestDocuments();
             Random rnd = new();
+            stopwatch.Start();
             Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Starting stress test");
             for (int i = 0; i < numberOfIterations; i++)
             {
@@ -71,6 +71,11 @@ namespace StressTestConsoleClient
                             item.ErrorMessage = statusInfo.Output;
                             Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Error for document with id {statusInfo.FunctionInput.First().Id}. ErrorMessage: {statusInfo.Output}");
                         }
+                        else if(item.CheckedCount > 30)
+                        {
+                            await client.PostAsync(item.RestartPostUri, null);
+                        }
+                        item.CheckedCount++;
                     }
                 }
 
@@ -78,6 +83,7 @@ namespace StressTestConsoleClient
                 if ((_documentStatuses.Count(p => p.Finished) + _documentStatuses.Count(p => p.Error)) == _documentStatuses.Count)
                 {
                     periodicTimer.Dispose();
+                    Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Finished processing {_documentStatuses.Count(p => !p.Finished)} documents");
                 }
             }
         }
