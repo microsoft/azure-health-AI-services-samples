@@ -13,7 +13,7 @@ To learn more about the Health-AI Services, please refer to the managed service 
 
 # Samples
 
-This project provides samples outlining example implementations of various use cases across stages of health data workflows. The "samples" folder contains all the sample apps organized by use case. The samples are listed here:
+This project provides samples outlining example implementations of various use cases across health. The "samples" folder contains all the sample apps. The samples are listed here:
 
 ## 1. Intelligent Dashboard powered by Text Analytics for Health
 
