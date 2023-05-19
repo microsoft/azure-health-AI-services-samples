@@ -1,9 +1,9 @@
 # Azure Health AI Services Samples
 
-This repository contains different samples applications and sample code to help you get started with the different Health-AI services.
-Based on these you will learn how to use our products, and accelerate your implementations.
+This repository contains different samples applications and code to help you get started with the different Microsoft Health-AI services.
+Based on these samples you will learn how to use our services, and accelerate your implementations.
 
-This project hosts open-source samples for services developed by the Health-AI team. 
+This project hosts open-source samples for services developed by the Microsoft Health-AI team. 
 To learn more about the Health-AI Services, please refer to the managed service documentation: 
 
 - Azure Health bot [Documentation](https://learn.microsoft.com/azure/health-bot/)
