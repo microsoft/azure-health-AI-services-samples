@@ -19,11 +19,11 @@ spec:
         image: mcr.microsoft.com/azure-cognitive-services/textanalytics/healthcare:latest
         resources:
           requests:
-            cpu: 4
-            memory: 10G
+            cpu: 6
+            memory: 12G
           limits:
-            cpu: 4
-            memory: 10G
+            cpu: 8
+            memory: 12G
         ports:
         - name: ta4h-port
           containerPort: 5000
