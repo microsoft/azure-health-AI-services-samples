@@ -55,7 +55,7 @@ After deployment Add the "Fhir Contributor" Role for the newly created "App rege
 
 ## Setup and Configure the Power App
 
-1. Download the Power App [here](/samples/intelligent-dashboard-ta4H/Power%20App/IntelligentDashboard.msapp)
+1. Download the Power App [here](/samples/intelligent-dashboard-ta4H/Power%20App/IntelligentDashboard.zip)
 2. Import the Power App in your Power Platform environment by going to Make.PowerPlatform.com, go to **Apps** and click on **Import Canvas App**
 3. Open the Intelligent Dashboard Power App.
 4. Connect your Storage Account to the PowerApp on importing
