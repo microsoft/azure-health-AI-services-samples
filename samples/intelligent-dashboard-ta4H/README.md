@@ -46,7 +46,8 @@ After deployment Add the "Fhir Contributor" Role for the newly created "App rege
 1. Download the Power BI pbix [here](/samples/intelligent-dashboard-ta4H/Power%20BI%20Dashboard/Clinical%20Insights%20FHIR.pbix). 
 2. Open the Power BI dashboard with [Power BI Destkop](https://powerbi.microsoft.com/desktop/) 
 3. Click on **Transform data**, select a FHIR table and click on **Advanced Editor**
-4. Change the FHIR url with the endpoint of your FHIR endpoint
+4. Change the FHIR url with the endpoint of your FHIR endpoint. 
+**Please repeat step 3 and 4 for every FHIR table in the demo**
 5. Give the PowerBI user FHIR Data Reader rights on the FHIR service via the Access Control Pane in Azure
 !["A diagram of the Intelligent dashboard architecture"](/media/intelligent-dashboard-ta4h/setup-powerbi-intelligent-dashboard.png)
 6. Publish the Power BI Dashboard to your workspace, to learn how to do this, click [here](https://learn.microsoft.com/power-bi/create-reports/desktop-upload-desktop-files)
