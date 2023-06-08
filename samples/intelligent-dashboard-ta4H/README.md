@@ -59,7 +59,7 @@ After deployment Add the "Fhir Contributor" Role for the newly created "App rege
 2. Import the Power App in your Power Platform environment by going to Make.PowerPlatform.com, go to **Apps** and click on **Import Canvas App**
 3. Open the Intelligent Dashboard Power App.
 4. Connect your Storage Account to the PowerApp on importing
-5. Make sure to update the **OnVisible** property of the **OverviewScreen** with the right ID of your Folder. The same goes for the Upload Documents button. 
+5. Make sure to update the **OnVisible** property of the **OverviewScreen** with the right ID of your Folder. The same goes for the Upload Documents button. You need to get the ID of the *medical-text-inputs* folder. The easiest way to get the ID is to add a Gallery item to the PowerApp, with source(Items) ```AzureBlobStorage.ListRootFolderV2().value``` and set the ID/Name property in the gallery items.
 More info can be found [here](https://learn.microsoft.com/power-apps/maker/canvas-apps/connections/connection-azure-blob-storage)
 5. Click on the **VisualizerScreen** on the left side of the screen and select the **Power BI** element.
 6. Update the TitleUri with the Published Web URI from Powerbi. You can find detailed instructions [here](https://learn.microsoft.com/power-bi/collaborate-share/service-publish-to-web) on how to do this.
