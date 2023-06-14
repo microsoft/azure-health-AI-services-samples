@@ -28,7 +28,6 @@ The Intelligent Dashboard is designed to help healthcare professionals and organ
 This sample provides code examples and best practices on how to use the containerized version of Text Analytics for Health in a scalable way.
 After completing the tutorial you will have: 
 - A .Net Core console application to help you stress test the service.
-- An Azure Function HTTP client application that recevies and transforms incoming requests.
 - A Kubernetes cluster that can scale with one or many Text Analytics for Health Nodes.
 - Several supporting services such as storage accounts, Queues, ... 
 

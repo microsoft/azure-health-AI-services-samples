@@ -4,7 +4,6 @@ This setup wil help you provision:
 - Text Analytics for Health
 - Azure Storage Account
 - Azure Kubernetes Service 
-- Azure Function.
 
 ## Prerequisites
 - An Azure Subscription
@@ -103,14 +102,11 @@ kubectl get services
 
 You will need to have your Azure Kubenernetes service External IP to provide in the deployment below.
 
-## Deploy the client applicaton to the Azure Function
+## Test your cluster through the .Net Core Client Console Application
 
-The last step is to deploy the Client Function. This function will recieve the documents and send them to your cluster. 
-Copy your External load balancer IP, as you will need this in the deployment below
+You can now start testing your cluster by sending one or many documents via the .Net Core Client Console Application.
+Copy your External load balancer IP, as you will need this in the Client Application
+You can find all the  information on how to use the sample [here](Usage.md)
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Fta4h-container-e2e-sample%2Fazuredeploy-function.json)
 
 
-## Using the sample
-
-You can find all the relevant information on how to use the sample [here](Usage.md)
