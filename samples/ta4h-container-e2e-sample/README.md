@@ -33,8 +33,8 @@ In the containerized version we recommend to use the following hardware specific
 
 ## Architecture
 
-The .Net Core Client Console Application can send one or more documents to the Azure Kubernetes Cluster (max 25). 
-All documents and results areasynchronous processed and stored on an Azure Storage Account. 
+The .Net Core Client Console Application sends one or more documents to the Azure Kubernetes Cluster (max 25). 
+All documents and processed results are asynchronous processed and stored on an Azure Storage Account. 
 If you are looking to process many documents, we recommend looking at the [Azure Kubernetes Autoscaler](https://learn.microsoft.com/en-us/azure/aks/cluster-autoscaler) to dynamically increase/decrease nodes based on requests
 !["A diagram of the Intelligent dashboard architecture"](/media/text-analytics-for-health-batch-async/architecture.jpg)
 
