@@ -31,6 +31,8 @@ In the containerized version we recommend to use the following hardware specific
 | **CPU** | 4 | 6 
 | **Memory** | 10 | 12 
 
+**IMPORTANT: The setup can currently only process documents where the processing does not take longer then 24 hours. The service will clear the Queue after 24 hours, this will be fixed in the upcoming version **
+
 ## Architecture
 
 The .Net Core Client Console Application sends one or more documents to the Azure Kubernetes Cluster (max 25). 
