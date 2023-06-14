@@ -26,7 +26,9 @@ az sshkey create --name "ta4hclusterKey" --resource-group "<RESOURCE_GROUP_NAME>
 
 When you have your SSH Key, you can setup your Azure Kubernetes Cluster, Text Analytics for Health and Storage Account.
 
-[![Deploy TA4H and an Azure Storage Account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2FTA4H-async-blueprint%2Fsamples%2Fta4h-container-e2e-sample%2Fazuredeploy-kubernetes-and-services.json)
+[![Deploy TA4H and an Azure Storage Account to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fazure-health-AI-services-samples%2Fmain%2Fsamples%2Fta4h-container-e2e-sample%2Fazuredeploy-kubernetes-and-services.json)
+
+
 
 After creating those resources, you will need to copy the following values:
 - The Text Analytics for Health Endpoint
@@ -89,7 +91,7 @@ After setting the secrets, you can now deploy the application using the kubectl 
 
 TA4H.yaml can be found [here](samples\ta4h-container-e2e-sample\TA4H.yaml).
 ```cli
-kubectl apply -f "https://raw.githubusercontent.com/microsoft/azure-health-AI-services-samples/TA4H-async-blueprint/samples/ta4h-container-e2e-sample/TA4H.yaml"
+kubectl apply -f "https://raw.githubusercontent.com/microsoft/azure-health-AI-services-samples/main/samples/ta4h-container-e2e-sample/TA4H.yaml"
 ```
 
 When the deployment is succesfull, you should be seeing the following services
