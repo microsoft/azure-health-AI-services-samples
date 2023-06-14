@@ -2,12 +2,12 @@
 
 This sample provides code examples and best practices on how to use the containerized version of Text Analytics for Health in a scalable way.
 
-After completing the tutorial you will have: 
+After completing the setup steps for this sample you will have: 
 - A .Net Core console application to help you stress test the service.
-- A Kubernetes cluster that can scale and with one or many Text Analytics for Health Nodes.
-- Several supporting services such as storage accounts, Queues, ... 
+- A Kubernetes cluster that with several Text Analytics for Health Containers.
+- Azure Storage service with containers, Queues and Azure Table Storage. 
 
-All these examples can be setup through a guided tutorial with several deployment scripts. With the goal to be used in an scalable and asynchronous way. 
+All these elements can be setup through a guided tutorial with several deployment scripts. With the goal to be used in an scalable and asynchronous way. 
 
 ## Throughput and hardware recommendation 
 
@@ -33,11 +33,9 @@ In the containerized version we recommend to use the following hardware specific
 
 ## Architecture
 
-The Azure Function recieves and sends documents to the kubernetes cluster. 
-This sample has been build to make sure the Azure Function and Azure Kubernetes Service can scale based on the user load. 
-All documents and results will be asynchronous processed and stored on your Azure Storage Account. 
-The processing will increase/decrease based on the number of nodes in your cluster and the Maximum instances
-
+The .Net Core Client Console Application can send one or more documents to the Azure Kubernetes Cluster (max 25). 
+All documents and results areasynchronous processed and stored on an Azure Storage Account. 
+If you are looking to process many documents, we recommend looking at the [Azure Kubernetes Autoscaler](https://learn.microsoft.com/en-us/azure/aks/cluster-autoscaler) to dynamically increase/decrease nodes based on requests
 !["A diagram of the Intelligent dashboard architecture"](/media/text-analytics-for-health-batch-async/architecture.jpg)
 
 ## Prerequisites
