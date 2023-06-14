@@ -1,295 +1,33 @@
-# Text Analytics for Health Container Async Batch Usage
+# Text Analytics for Health Container Batch Usage
 
-This samples uses a [.Net Core Console Application](/samples/ta4h-container-e2e-sample/StressTestConsoleClient/) and Azure Functions to recieve and propogate messages to the Azure Kubernetes Cluster. 
-This enables scaling and status follow-up. To enable background jobs we are using Durable Functions, more specifically we are using the Async HTTP API pattern.
+This samples uses a [.Net Core Console Application](/samples/ta4h-container-e2e-sample/StressTestConsoleClient/) that sends documents to the Azure Kubernetes Cluster. The .Net Core Console application sends all the documents, in an async way to the cluster. The Text Analytics for Health containers  will process the documents in an asynchronous way. If all the containers are seeded, all new documents will be added to the Text Analytics for Health Queue.
 
-With this setup you can use the scalability of Azure functions to automatically scale out based on incoming requests. You can read more on Azure Functions scaling [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-scale). 
-
-!["Diagram of the Async HTTP Apis for Azure Functions"](https://learn.microsoft.com/en-us/azure/azure-functions/durable/media/durable-functions-concepts/async-http-api.png)
-
-
-The client setup architecture can be found below:
+The high level client architecture can be seen below:
 
 !["Diagram of the client sample setup"](../../media/text-analytics-for-health-batch-async/client-architecture.png)
 
+When the Text Analytics for Health containers start to receive documents, the containers will put all the documents on on the `input` container. All the processed documents will be found in the `result` container. All documents from the `input` and `result` container can be corelated by an unique generated identifier.
+
+When all containers are busy processing documents, all new documents will be put on the queue and picked up by a container, as soon as its done processing the previous document. 
+
+All the information of the jobs can be found in the `taJobs` Table in Azure Table Storage. The Status field shows the status of the document (`Queued, Processing, Succeeded, Failed`)
+
+An example of the `taJobs` can be seen below
+!["Text Analytics for Health Queue"](../../media/text-analytics-for-health-batch-async/job-status.png)
+
 ## Start using the sample
 
-To start interacting with the cluster you need to send on or more HTTP POST requests to your Azure Function. For every request you can send up to 25 documents, with a max of 125 000 characters in total, to the Azure Function.
-The console application contains several generated patient documents that you can use to test the endpoints. 
+The .NET Core Console application will interact with the Azure Kubernetes Cluster. You will need to change the `TextAnalyticsEndpoint` varaible with the public IP of your Azure Kubernetes Cluster.
+
+!["Screenshot of the .Net Core Application with the endpoint url"](../../media/text-analytics-for-health-batch-async/console-app.png)
+
+The Client Application uses the Text Analytics for Health Endpoint, which can send one or more documents to the cluster. For every request you can send up to 25 documents, with a max of 125 000 characters in total.
+The Client application contains several synthetic patient documents that you can use to test the endpoint. 
 
 When starting the [.Net Core Console Application](/samples/ta4h-container-e2e-sample/StressTestConsoleClient/) you will need to provide the number of requests and documents you want to send to the cluster.
 
 !["Screenshot of the .Net Core Application with the number of requests and documents"](../../media/text-analytics-for-health-batch-async/client-console-application.png)
 
-The client .Net Core application also starts polling the Function to validate if the job succeeded or failed. 
+When all documents have been send, you can track the proccess in the Azure Table Storage (`taJobs`)
 
-All processed documents will be automatically stored on the storage account you provided when setting up the client application. For every document send to the Function, there will be a dedidcated JSON file with the original document and the results. All results are stored in a container named `healthcareentitiesresults`, the naming convention of the file is the current DateTime followed with an underscore and the `id` of the document 
-
-!["A screenshot of storage account container"](/media/text-analytics-for-health-batch-async/storage-account-container.png)
-
-
-## JSON result structure
-Every file on your Azure Storage Accountshould contain the following structure
-
-```JSON
-{
-    "id": "1",
-    "text": "The patient is taking Metformin 500mg daily for diabetes",
-    "healthcareEntitiesResult": [
-        {
-            "Text": "Metformin",
-            "Category": {},
-            "SubCategory": null,
-            "ConfidenceScore": 1.0,
-            "Offset": 22,
-            "Length": 9,
-            "DataSources": [
-                {
-                    "EntityId": "C0025598",
-                    "Name": "UMLS"
-                },
-                {
-                    "EntityId": "A10BA02",
-                    "Name": "ATC"
-                },
-                {
-                    "EntityId": "0000008019",
-                    "Name": "CHV"
-                },
-                {
-                    "EntityId": "4007-0083",
-                    "Name": "CSP"
-                },
-                {
-                    "EntityId": "DB00331",
-                    "Name": "DRUGBANK"
-                },
-                {
-                    "EntityId": "4442",
-                    "Name": "GS"
-                },
-                {
-                    "EntityId": "sh2007006278",
-                    "Name": "LCH_NW"
-                },
-                {
-                    "EntityId": "LP33332-5",
-                    "Name": "LNC"
-                },
-                {
-                    "EntityId": "d03807",
-                    "Name": "MMSL"
-                },
-                {
-                    "EntityId": "D008687",
-                    "Name": "MSH"
-                },
-                {
-                    "EntityId": "9100L32L2N",
-                    "Name": "MTHSPL"
-                },
-                {
-                    "EntityId": "C61612",
-                    "Name": "NCI"
-                },
-                {
-                    "EntityId": "004534",
-                    "Name": "NDDF"
-                },
-                {
-                    "EntityId": "x01Li",
-                    "Name": "RCD"
-                },
-                {
-                    "EntityId": "6809",
-                    "Name": "RXNORM"
-                },
-                {
-                    "EntityId": "372567009",
-                    "Name": "SNOMEDCT_US"
-                },
-                {
-                    "EntityId": "4023979",
-                    "Name": "VANDF"
-                }
-            ],
-            "Assertion": null,
-            "NormalizedText": "metformin"
-        },
-        {
-            "Text": "500mg",
-            "Category": {},
-            "SubCategory": null,
-            "ConfidenceScore": 1.0,
-            "Offset": 32,
-            "Length": 5,
-            "DataSources": [],
-            "Assertion": null,
-            "NormalizedText": null
-        },
-        {
-            "Text": "daily",
-            "Category": {},
-            "SubCategory": null,
-            "ConfidenceScore": 1.0,
-            "Offset": 38,
-            "Length": 5,
-            "DataSources": [],
-            "Assertion": null,
-            "NormalizedText": null
-        },
-        {
-            "Text": "diabetes",
-            "Category": {},
-            "SubCategory": null,
-            "ConfidenceScore": 1.0,
-            "Offset": 48,
-            "Length": 8,
-            "DataSources": [
-                {
-                    "EntityId": "C0011849",
-                    "Name": "UMLS"
-                },
-                {
-                    "EntityId": "DIABT",
-                    "Name": "AIR"
-                },
-                {
-                    "EntityId": "0000005999",
-                    "Name": "AOD"
-                },
-                {
-                    "EntityId": "BI00008",
-                    "Name": "BI"
-                },
-                {
-                    "EntityId": "1018264",
-                    "Name": "CCPSS"
-                },
-                {
-                    "EntityId": "0000003834",
-                    "Name": "CHV"
-                },
-                {
-                    "EntityId": "230",
-                    "Name": "COSTAR"
-                },
-                {
-                    "EntityId": "0862-6160",
-                    "Name": "CSP"
-                },
-                {
-                    "EntityId": "DIABETES MELL",
-                    "Name": "CST"
-                },
-                {
-                    "EntityId": "U000960",
-                    "Name": "DXP"
-                },
-                {
-                    "EntityId": "HP:0000819",
-                    "Name": "HPO"
-                },
-                {
-                    "EntityId": "E10-E14.9",
-                    "Name": "ICD10"
-                },
-                {
-                    "EntityId": "E10-E14.9",
-                    "Name": "ICD10AM"
-                },
-                {
-                    "EntityId": "E08-E13",
-                    "Name": "ICD10CM"
-                },
-                {
-                    "EntityId": "250",
-                    "Name": "ICD9CM"
-                },
-                {
-                    "EntityId": "T90",
-                    "Name": "ICPC"
-                },
-                {
-                    "EntityId": "T90002",
-                    "Name": "ICPC2P"
-                },
-                {
-                    "EntityId": "MTHU020781",
-                    "Name": "LNC"
-                },
-                {
-                    "EntityId": "10012601",
-                    "Name": "MDR"
-                },
-                {
-                    "EntityId": "30479",
-                    "Name": "MEDCIN"
-                },
-                {
-                    "EntityId": "4",
-                    "Name": "MEDLINEPLUS"
-                },
-                {
-                    "EntityId": "D003920",
-                    "Name": "MSH"
-                },
-                {
-                    "EntityId": "U000263",
-                    "Name": "MTH"
-                },
-                {
-                    "EntityId": "250.0",
-                    "Name": "MTHICD9"
-                },
-                {
-                    "EntityId": "00385",
-                    "Name": "NANDA-I"
-                },
-                {
-                    "EntityId": "C2985",
-                    "Name": "NCI"
-                },
-                {
-                    "EntityId": "MTHU036798",
-                    "Name": "OMIM"
-                },
-                {
-                    "EntityId": "CDR0000685852",
-                    "Name": "PDQ"
-                },
-                {
-                    "EntityId": "13970",
-                    "Name": "PSY"
-                },
-                {
-                    "EntityId": "R0121582",
-                    "Name": "QMR"
-                },
-                {
-                    "EntityId": "C10..",
-                    "Name": "RCD"
-                },
-                {
-                    "EntityId": "D-2381",
-                    "Name": "SNM"
-                },
-                {
-                    "EntityId": "DB-61000",
-                    "Name": "SNMI"
-                },
-                {
-                    "EntityId": "73211009",
-                    "Name": "SNOMEDCT_US"
-                },
-                {
-                    "EntityId": "0371",
-                    "Name": "WHO"
-                }
-            ],
-            "Assertion": null,
-            "NormalizedText": "Diabetes Mellitus"
-        }
-    ]
-}
-``` 
+!["Screenshot of the .Net Core Application with the number of requests and documents"](../../media/text-analytics-for-health-batch-async/console-app-finished.png)

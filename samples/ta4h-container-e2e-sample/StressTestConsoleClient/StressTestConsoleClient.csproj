@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Azure.AI.TextAnalytics" Version="5.2.0" />
+
   </ItemGroup>
 
   <ItemGroup>

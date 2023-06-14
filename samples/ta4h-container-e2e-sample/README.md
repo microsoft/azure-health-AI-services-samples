@@ -4,7 +4,6 @@ This sample provides code examples and best practices on how to use the containe
 
 After completing the tutorial you will have: 
 - A .Net Core console application to help you stress test the service.
-- An Azure Function HTTP client application that recevies and transforms incoming requests.
 - A Kubernetes cluster that can scale and with one or many Text Analytics for Health Nodes.
 - Several supporting services such as storage accounts, Queues, ... 
 
@@ -32,8 +31,6 @@ In the containerized version we recommend to use the following hardware specific
 | **CPU** | 4 | 6 
 | **Memory** | 10 | 12 
 
-
-
 ## Architecture
 
 The Azure Function recieves and sends documents to the kubernetes cluster. 
@@ -43,21 +40,20 @@ The processing will increase/decrease based on the number of nodes in your clust
 
 !["A diagram of the Intelligent dashboard architecture"](/media/text-analytics-for-health-batch-async/architecture.jpg)
 
+## Prerequisites
+- An Azure Subscription
+- kubectl 
+- az CLI installed 
+
 ## Setup the sample
 
 The setup wil help you provision: 
 - Text Analytics for Health
 - Azure Storage Account
 - Azure Kubernetes Service 
-- Azure Function with supporting services.
 
-## Prerequisites
-- An Azure Subscription
-- kubectl 
-- az CLI installed 
-
-Click [here](Setup.md) to setup the needed resources.
+Click [here](Setup.md) to setup the resources.
 
 ## Using the sample
 
-You can find all the relevant information on how to use the sampel [here](Usage.md)
+You can find all the relevant information on how to use the client sample for the containerized setup [here](Usage.md)
