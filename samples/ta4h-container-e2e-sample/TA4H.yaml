@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ta4h-deployment
+  labels:
+    app: ta4h-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ta4h-deployment
+  template:
+    metadata:
+      labels:
+        app: ta4h-deployment
+    spec:
+      containers:
+      - name: ta4h-deployment
+        image: mcr.microsoft.com/azure-cognitive-services/textanalytics/healthcare:latest
+        resources:
+          requests:
+            cpu: 6
+            memory: 12G
+          limits:
+            cpu: 8
+            memory: 12G
+        ports:
+        - name: ta4h-port
+          containerPort: 5000
+          protocol: TCP
+        args:
+        - "Eula=accept"
+        - "rai_terms=accept"
+        - "ApiKey=$(api-key)"
+        - "Billing=$(billing)"
+        env:
+        - name: StorageSettings__JobRepository__AccessMode
+          value: ConnectionString
+        - name: StorageSettings__JobRepository__CredentialData
+          valueFrom:
+            secretKeyRef:
+              name: credentialdata
+              key:  storageconnectionstring
+        - name: StorageSettings__JobDataInput__AccessMode
+          value: ConnectionString
+        - name: StorageSettings__JobDataInput__CredentialData
+          valueFrom:
+            secretKeyRef:
+              name: credentialdata
+              key:  storageconnectionstring
+        - name: StorageSettings__JobDataResult__AccessMode
+          value: ConnectionString
+        - name: StorageSettings__JobDataResult__CredentialData
+          valueFrom:
+            secretKeyRef:
+              name: credentialdata
+              key:  storageconnectionstring
+        - name: StorageSettings__Queue__AccessMode
+          value: ConnectionString
+        - name: StorageSettings__Queue__CredentialData
+          valueFrom:
+            secretKeyRef:
+              name: credentialdata
+              key:  storageconnectionstring
+        - name: api-key
+          valueFrom:
+            secretKeyRef:
+              name: billing-api-key
+              key: api-key
+        - name: billing
+          valueFrom:
+            secretKeyRef:
+              name: billing-endpoint
+              key: billing
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-balancer-ta4h
+spec:
+  type: LoadBalancer
+  ports:
+  - name: ta4h-load-balancer
+    protocol: TCP
+    port: 80
+    targetPort: 5000
+  selector:
+    app: ta4h-deployment
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ta4h-hpa
+spec:
+  maxReplicas: 10 
+  minReplicas: 1  
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ta4h-deployment
+  targetCPUUtilizationPercentage: 60 
