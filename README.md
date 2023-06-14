@@ -36,7 +36,7 @@ All these examples can be setup through a guided tutorial with several deploymen
 
 !["A screenshot of the Intelligent Dashboard PowerApp - PowerBI screen"](/media/text-analytics-for-health-batch-async/architecture.jpg)
 
-[I want to try this sample](/samples/text-analytics-for-health-async/README.md)
+[I want to try this sample](/samples/ta4h-container-e2e-sample/README.md)
 
 ## 3. Day in the life of a Nurse. [TA4H - PowerApps - Nuance - FHIR]
 

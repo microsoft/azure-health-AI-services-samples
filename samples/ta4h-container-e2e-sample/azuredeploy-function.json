@@ -26,7 +26,7 @@
         },
         "functionPackageUrl": {
             "type": "string",
-            "defaultValue": "https://github.com/microsoft/azure-health-AI-services-samples/blob/TA4H-async-blueprint/samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/client.zip?raw=true",
+            "defaultValue": "https://github.com/microsoft/azure-health-AI-services-samples/blob/TA4H-async-blueprint/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/client.zip?raw=true",
             "metadata": {
                 "description": "The URL for the GitHub repository that contains the project to deploy."
             }

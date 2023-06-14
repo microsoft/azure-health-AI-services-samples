@@ -1,6 +1,6 @@
 # Text Analytics for Health Container Async Batch Usage
 
-This samples uses a [.Net Core Console Application](/samples/text-analytics-for-health-async/StressTestConsoleClient/) and Azure Functions to recieve and propogate messages to the Azure Kubernetes Cluster. 
+This samples uses a [.Net Core Console Application](/samples/ta4h-container-e2e-sample/StressTestConsoleClient/) and Azure Functions to recieve and propogate messages to the Azure Kubernetes Cluster. 
 This enables scaling and status follow-up. To enable background jobs we are using Durable Functions, more specifically we are using the Async HTTP API pattern.
 
 With this setup you can use the scalability of Azure functions to automatically scale out based on incoming requests. You can read more on Azure Functions scaling [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-scale). 
@@ -17,7 +17,7 @@ The client setup architecture can be found below:
 To start interacting with the cluster you need to send on or more HTTP POST requests to your Azure Function. For every request you can send up to 25 documents, with a max of 125 000 characters in total, to the Azure Function.
 The console application contains several generated patient documents that you can use to test the endpoints. 
 
-When starting the [.Net Core Console Application](/samples/text-analytics-for-health-async/StressTestConsoleClient/) you will need to provide the number of requests and documents you want to send to the cluster.
+When starting the [.Net Core Console Application](/samples/ta4h-container-e2e-sample/StressTestConsoleClient/) you will need to provide the number of requests and documents you want to send to the cluster.
 
 !["Screenshot of the .Net Core Application with the number of requests and documents"](../../media/text-analytics-for-health-batch-async/client-console-application.png)
 

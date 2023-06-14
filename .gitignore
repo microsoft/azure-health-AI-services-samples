@@ -1,7 +1,7 @@
-/samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/.vs
-/samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/bin/Debug/net6.0
-/samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/obj
-/samples/text-analytics-for-health-async/TextAnalyticsForHealthAsync-Client/Properties/PublishProfiles
-/samples/text-analytics-for-health-async/StressTestConsoleClient/.vs
-/samples/text-analytics-for-health-async/StressTestConsoleClient/bin
-/samples/text-analytics-for-health-async/StressTestConsoleClient/obj
+/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/.vs
+/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/bin/Debug/net6.0
+/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/obj
+/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/Properties/PublishProfiles
+/samples/ta4h-container-e2e-sample/StressTestConsoleClient/.vs
+/samples/ta4h-container-e2e-sample/StressTestConsoleClient/bin
+/samples/ta4h-container-e2e-sample/StressTestConsoleClient/obj
