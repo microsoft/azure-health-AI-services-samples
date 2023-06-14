@@ -113,4 +113,4 @@ Copy your External load balancer IP, as you will need this in the deployment bel
 
 ## Using the sample
 
-You can find all the relevant information on how to use the sampel [here](Usage.md)
+You can find all the relevant information on how to use the sample [here](Usage.md)
