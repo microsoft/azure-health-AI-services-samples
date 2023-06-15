@@ -1,5 +1,7 @@
 ﻿using Azure;
 using Azure.AI.TextAnalytics;
+using Newtonsoft.Json;
+using System;
 using System.Diagnostics;
 
 namespace StressTestConsoleClient
@@ -7,6 +9,7 @@ namespace StressTestConsoleClient
     class Program
     {
         private static readonly string TextAnalyticsEndPoint = "http://0.0.0.0";
+        //The subscription key is set in the container in the cluster, but the SDK requires a key, adding dummy key.
         private static string TextAnalyticsSubscriptionKey = "123";
         static async Task Main(string[] args)
         {
@@ -22,6 +25,7 @@ namespace StressTestConsoleClient
             Random rnd = new();
             stopwatch.Start();
             Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Starting stress test");
+            var client = new TextAnalyticsClient(new Uri(TextAnalyticsEndPoint), new AzureKeyCredential(TextAnalyticsSubscriptionKey));
             for (int i = 0; i < numberOfIterations; i++)
             {
                 var documents = new List<TextDocumentInput>();
@@ -29,21 +33,46 @@ namespace StressTestConsoleClient
                 {
                     documents.Add(new TextDocumentInput( $"{Guid.NewGuid()}", testDocuments[rnd.Next(1, 11)] ));
                 }
-                tasks.Add(StartAnalyzeHealthcareEntities(documents));
-                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Number of request send: {i +1}");
+                tasks.Add(StartAnalyzeHealthcareEntities(i +1,client, documents));
+                await Task.Delay(20);
+                Console.WriteLine($"[Elapsed Milliseconds: {stopwatch.ElapsedMilliseconds}] Request number {i +1}");
             }
+            Console.WriteLine($"Checking if all requests were accepted");
+            Console.WriteLine($"--------------------------------------");
+
             await Task.WhenAll(tasks);
-            Console.WriteLine($"All Done");
+            Console.WriteLine($"All Done!!");
         }
 
 
-        static async Task StartAnalyzeHealthcareEntities(List<TextDocumentInput> documents)
+        static async Task StartAnalyzeHealthcareEntities(int index, TextAnalyticsClient client, List<TextDocumentInput> documents)
         {
-            var client = new TextAnalyticsClient(new Uri(TextAnalyticsEndPoint), new AzureKeyCredential(TextAnalyticsSubscriptionKey));
             var result = await client.StartAnalyzeHealthcareEntitiesAsync(documents);
-            File.AppendAllText($"{System.Environment.CurrentDirectory}/output/SendDocuments.txt", $"{result.Id}{Environment.NewLine}");
+            var i = 0;
+            while(true) {
+                var WaitTime = TimeSpan.FromSeconds(Math.Pow(2, i));
+                i++;
+                if (string.IsNullOrWhiteSpace(result.Status.ToString()))
+                {
+                    Console.WriteLine($"({index}) [RETRY] no status, retrying in {WaitTime} seconds");
+                    await result.UpdateStatusAsync();
+                    await Task.Delay(WaitTime);
+                }
+                else if(result.Status == TextAnalyticsOperationStatus.Failed || result.Status == TextAnalyticsOperationStatus.Rejected)
+                {
+                    Console.WriteLine($"({index}) [FAILED] {result.Status}, retrying in {WaitTime} seconds");
+                    result = await client.StartAnalyzeHealthcareEntitiesAsync(documents);
+                    await Task.Delay(WaitTime);
+                }
+                else
+                {
+                    Console.WriteLine($"({index}) [SUCCESS] {result.Status}");
+                    break;
+                }
+            }
         }
 
+     
 
         static List<string> GetAllTestDocuments()
         {
