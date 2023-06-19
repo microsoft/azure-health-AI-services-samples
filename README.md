@@ -20,9 +20,9 @@ Currently we have 4 samples
 |Sample|Technology Components||
 | --- | --- | --- | 
 | Intelligent Dashboard powered by Text Analytics for Health | TA4H - PowerApps - PowerBI - FHIR | [I want to try this sample](/samples/intelligent-dashboard-ta4H/README.md) | 
-| Text Analytics for Health Container Async Batch Sample | TA4H - AKS | [I want to try this sample](/samples/ta4h-container-e2e-sample/README.md) | 
+| Text Analytics for Health Container Async sample | TA4H - AKS | [I want to try this sample](/samples/ta4h-container-e2e-sample/README.md) | 
 | Day in the life of a Nurse | TA4H - PowerApps - Nuance - FHIR | [I want to try this sample](https://github.com/microsoft/nurseempowerment) | 
-| Health Insights Clinical Trials Matching Service Healthbot Sample | Azure Health Bot - Azure Health Insights - Clinical Trial Matcher |  [I want to try this sample](https://github.com/microsoft/ClinicalTrialsBlueprint) | 
+| Trials Matching integration into Azure Health Bot  | Azure Health Bot - Azure Health Insights - Clinical Trial Matcher |  [I want to try this sample](https://github.com/microsoft/ClinicalTrialsBlueprint) | 
 
 
 ## 1. Intelligent Dashboard powered by Text Analytics for Health [TA4H - PowerApps - PowerBI - FHIR]
@@ -33,7 +33,7 @@ The Intelligent Dashboard is designed to help healthcare professionals and organ
 
 [I want to try this sample](/samples/intelligent-dashboard-ta4H/README.md)
 
-## 2. Text Analytics for Health Container Async Batch Sample [TA4H - AKS]
+## 2. Text Analytics for Health Container Async sample [TA4H - AKS]
 
 This sample provides code examples and best practices on how to use the containerized version of Text Analytics for Health in a scalable way.
 After completing the tutorial you will have: 
@@ -56,7 +56,7 @@ This repository contains several open-source example [Power Apps](https://make.p
 
 [I want to try this sample](https://github.com/microsoft/nurseempowerment)
 
-## 4. Health Insights Clinical Trials Matching Service Healthbot Sample [Azure Health Bot - Azure Health Insights - Clinical Trial Matcher]
+## 4. Trials Matching integration into Azure Health Bot [Azure Health Bot - Azure Health Insights - Clinical Trial Matcher]
 
 This repository allows you to deploy a [Clinical Trials Matching Bot](https://learn.microsoft.com/en-us/azure/azure-health-insights/trial-matcher/overview#azure-health-bot-integration). It uses the Trial Matcher engine, which is an AI model offered within Project Health Insights. Trial Matcher is designed to match patients to potentially suitable clinical trials or find a group of potentially eligible patients to a list of clinical trials. Read more about Azure Trial Matcher [here](https://learn.microsoft.com/en-us/azure/azure-health-insights/trial-matcher/overview). This sample will generate an Azure Health Bot with built-in Clinical Trial Matching integration, which enables end-user to find relevant clinical trials for their conditions, based on eligibility.
 
