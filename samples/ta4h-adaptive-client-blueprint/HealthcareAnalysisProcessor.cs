@@ -43,7 +43,6 @@ public class HealthcareAnalysisProcessor
 
         var queueProcessingTask = StartQueueProcessingAsync();
 
-        var sendDocumentsTasks = new List<Task>();
         while (true)
         {
             if (_jobsQueue.Count >= MaxSize)
@@ -58,14 +57,7 @@ public class HealthcareAnalysisProcessor
             {
                 break;
             }
-            var task = SendPaylodToProcessing(payload);
-            sendDocumentsTasks.Add(task);
-            if (sendDocumentsTasks.Count > 10)
-            {
-                await Task.WhenAll(sendDocumentsTasks);
-                sendDocumentsTasks.Clear();
-                sendDocumentsTasks.Add(Task.Delay(2500)); // make sure we wait for at least 2.5 seconds before sending the next batch of requests, so as to not hit the request limit
-            }
+            await SendPaylodToProcessing(payload);
         }
         await queueProcessingTask;
     }
@@ -80,18 +72,11 @@ public class HealthcareAnalysisProcessor
 
     public async Task StartQueueProcessingAsync()
     {
-        var queueProcessingTasks = new List<Task>();
         while (true)
         {
             if (_jobsQueue.TryDequeue(out var item))
             {
-                var task = ProcessQueueItemAsync(item);
-                queueProcessingTasks.Add(task);
-                if (queueProcessingTasks.Count > 10 || dataset.IsComplete)
-                {
-                    await Task.WhenAll(queueProcessingTasks.ToArray());
-                    queueProcessingTasks.Clear();
-                }
+                await ProcessQueueItemAsync(item);
             }
             else
             {
