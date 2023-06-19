@@ -11,9 +11,19 @@ To learn more about the Health-AI Services, please refer to the managed service 
 - Text Analytics for Health [Documentation](https://learn.microsoft.com/en-us/azure/cognitive-services/language-service/text-analytics-for-health/overview?tabs=ner)
 
 
+
 # Samples
 
-This project provides samples outlining example implementations of various use cases across health. The "samples" folder contains all the sample apps. The samples are listed here:
+This project provides samples outlining implementations of various use cases across health. 
+Currently we have 4 samples
+
+|Sample|Technology Components||
+| --- | --- | --- | 
+| Intelligent Dashboard powered by Text Analytics for Health | TA4H - PowerApps - PowerBI - FHIR | [I want to try this sample](/samples/intelligent-dashboard-ta4H/README.md) | 
+| Text Analytics for Health Container Async Batch Sample | TA4H - AKS | [I want to try this sample](/samples/ta4h-container-e2e-sample/README.md) | 
+| Day in the life of a Nurse | TA4H - PowerApps - Nuance - FHIR | [I want to try this sample](https://github.com/microsoft/nurseempowerment) | 
+| Health Insights Clinical Trials Matching Service Healthbot Sample | Azure Health Bot - Azure Health Insights - Clinical Trial Matcher |  [I want to try this sample](https://github.com/microsoft/ClinicalTrialsBlueprint) | 
+
 
 ## 1. Intelligent Dashboard powered by Text Analytics for Health [TA4H - PowerApps - PowerBI - FHIR]
 
@@ -37,7 +47,7 @@ All these examples can be setup through a guided tutorial with several deploymen
 
 [I want to try this sample](/samples/ta4h-container-e2e-sample/README.md)
 
-## 3. Day in the life of a Nurse. [TA4H - PowerApps - Nuance - FHIR]
+## 3. Day in the life of a Nurse [TA4H - PowerApps - Nuance - FHIR]
 
 This repository contains several open-source example [Power Apps](https://make.powerapps.com/) which were created based on a study called 'The Day in the Life of a Nurse'. One of the outcomes were several minimal viable products that could support nurses in their daily job. These starter Power Apps solutions are enhanced with [Nuance Speech to Text](https://www.nuancehealthcaredeveloper.com/?q=Dragon-Medical-SpeechKit-Home), and utilize [Text Analytics for Health](https://docs.microsoft.com/en-us/azure/cognitive-services/language-service/text-analytics-for-health/overview ) for medical structuring. The data is being served from [FHIR API](https://docs.microsoft.com/en-us/azure/healthcare-apis/healthcare-apis-overview) and utilize the [FHIRBase](https://docs.microsoft.com/en-us/connectors/fhirbase/) and [FHIRClinical](https://docs.microsoft.com/en-us/connectors/fhirclinical/) Power Platform connectors. The application can also be linked to [Microsoft Shifts](https://support.microsoft.com/en-us/office/get-started-in-shifts-5f3e30d8-1821-4904-be26-c3cd25a497d6) where you can get real-time shift info from your colleagues.
 
@@ -45,6 +55,14 @@ This repository contains several open-source example [Power Apps](https://make.p
 !["A screenshot of the easy reporting power app for nurses"](/media/day-in-the-life-of-a-nurse/easy-reporting.png)
 
 [I want to try this sample](https://github.com/microsoft/nurseempowerment)
+
+## 4. Health Insights Clinical Trials Matching Service Healthbot Sample [Azure Health Bot - Azure Health Insights - Clinical Trial Matcher]
+
+This repository allows you to deploy a [Clinical Trials Matching Bot](https://learn.microsoft.com/en-us/azure/azure-health-insights/trial-matcher/overview#azure-health-bot-integration). It uses the Trial Matcher engine, which is an AI model offered within Project Health Insights. Trial Matcher is designed to match patients to potentially suitable clinical trials or find a group of potentially eligible patients to a list of clinical trials. Read more about Azure Trial Matcher [here](https://learn.microsoft.com/en-us/azure/azure-health-insights/trial-matcher/overview). This sample will generate an Azure Health Bot with built-in Clinical Trial Matching integration, which enables end-user to find relevant clinical trials for their conditions, based on eligibility.
+
+!["A screenshot that shows an example on how to use the Trial Matcher in the Azure Health Bot"](/media/azure-health-insights-integrated-healthbot/example-chat-scenario.png)
+
+[I want to try this sample](https://github.com/microsoft/ClinicalTrialsBlueprint)
 
 
 ## Contributing
