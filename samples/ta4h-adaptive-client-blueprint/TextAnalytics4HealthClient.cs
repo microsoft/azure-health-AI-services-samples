@@ -93,7 +93,7 @@ public class TextAnalytics4HealthClient
                 var jitterer = new Random(request.RequestUri.OriginalString.GetHashCode());
                 var tryAgainInSeconds = jitterer.Next(15, 60);
                 _logger.LogWarning("Request to {url} failed with http 429 status. next retry in {tryAgainInSeconds} seconds", request.RequestUri, tryAgainInSeconds);
-                await Task.Delay(TimeSpan.FromSeconds(tryAgainInSeconds));
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 _logger.LogInformation("Waited to retry for {tryAgainInSeconds}, ready to try again", tryAgainInSeconds);
             }
             catch (TaskCanceledException taskCancelledException)
