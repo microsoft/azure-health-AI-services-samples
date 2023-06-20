@@ -29,7 +29,7 @@ public class Dataset : IEnumerable<TextDocumentInput>
     {
         List<string> fileNames = await GetListOfFilesForProcessingAsync();
         _inputData = await BatchProcessor.ProcessInBatchesAsync(
-            fileNames, 10, ReadDocumetnFromStorage);
+            fileNames, 10, ReadDocumentFromStorage);
         if (_dataProcessingOptions.Shuffle)
         {
             _inputData = _inputData.OrderBy(a => Guid.NewGuid());
@@ -37,12 +37,13 @@ public class Dataset : IEnumerable<TextDocumentInput>
         _enumerator = Batch(_inputData.OrderBy(a => Guid.NewGuid())).GetEnumerator();
     }
 
-    private async Task<TextDocumentInput> ReadDocumetnFromStorage(string filename)
+    private async Task<TextDocumentInput> ReadDocumentFromStorage(string filename)
     {
         var text = await _fileStorage.ReadTextFileAsync(filename);
         var docId = string.Join("/", filename.Split(Path.DirectorySeparatorChar)).Replace(".txt", "");
         _logger.LogDebug("Read document {docId}", docId);
-        return new TextDocumentInput(docId, text);
+        var language = _options.Language;
+        return new TextDocumentInput(docId, text) { Language = language };
     }
 
     private async Task<List<string>> GetListOfFilesForProcessingAsync()

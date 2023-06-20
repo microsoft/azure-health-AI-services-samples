@@ -1,10 +1,7 @@
-﻿using Azure;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System.Diagnostics;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
@@ -103,6 +100,13 @@ public class TextAnalytics4HealthClient
                 _logger.LogWarning("Request to {url} failed with timeout: {message}. next retry in {tryAgainInSeconds}", request.RequestUri, taskCancelledException.Message, tryAgainInSeconds);
                 await Task.Delay(TimeSpan.FromSeconds(tryAgainInSeconds));
             }
+            var newRequest = new HttpRequestMessage(request.Method, request.RequestUri)
+            {
+                Content = request.Content,
+                
+            };
+            newRequest.Headers.Add("Ocp-Apim-Subscription-Key", _options.ApiKey);
+            request = newRequest;
         }
         throw lastException;
     }
