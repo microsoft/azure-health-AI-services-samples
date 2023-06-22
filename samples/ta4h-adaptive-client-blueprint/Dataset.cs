@@ -37,6 +37,8 @@ public class Dataset : IEnumerable<TextDocumentInput>
         _enumerator = Batch(_inputData.OrderBy(a => Guid.NewGuid())).GetEnumerator();
     }
 
+
+
     private async Task<TextDocumentInput> ReadDocumentFromStorage(string filename)
     {
         var text = await _fileStorage.ReadTextFileAsync(filename);
@@ -53,8 +55,9 @@ public class Dataset : IEnumerable<TextDocumentInput>
         return fileNames;
     }
 
-    public Ta4hInputPayload GetNextPayload()
+    public async Task<Ta4hInputPayload> GetNextPayloadAsync()
     {
+        await Task.CompletedTask;
         if (_enumerator.MoveNext())
         {
             var batch = _enumerator.Current;

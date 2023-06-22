@@ -51,7 +51,7 @@ public class HealthcareAnalysisProcessor
                 await Task.Delay(500);
                 continue;
             }
-            var payload = dataset.GetNextPayload();
+            var payload = await dataset.GetNextPayloadAsync();
 
             if (!payload.Documents.Any())
             {
@@ -76,6 +76,7 @@ public class HealthcareAnalysisProcessor
         {
             if (_jobsQueue.TryDequeue(out var item))
             {
+                
                 await ProcessQueueItemAsync(item);
             }
             else
