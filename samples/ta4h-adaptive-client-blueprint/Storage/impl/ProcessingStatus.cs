@@ -3,5 +3,6 @@
     NotStarted,
     Processing,
     Succeeded,
-    Error
+    Failed,
+    NotFound
 }

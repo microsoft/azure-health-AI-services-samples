@@ -11,9 +11,14 @@
     public bool Shuffle { get; set; } = false;
 
     /// <summary>
-    /// The maximun number of documents to be processed by the application.
+    /// The maximun number of documents to be processed by the application in one run.
     /// </summary>
     public int MaxDocs { get; set; }
+
+    /// <summary>
+    /// The maximun number of documents to be loaded into memory from processing.
+    /// </summary>
+    public int MaxBatchSize { get; set; } = 5000;
 
     /// <summary>
     /// For dev purposes only - the application will cycle to the documents this number of times.

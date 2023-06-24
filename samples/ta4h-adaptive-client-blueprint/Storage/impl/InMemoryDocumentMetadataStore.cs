@@ -1,8 +1,9 @@
 ﻿public class InMemoryDocumentMetadataStore : IDocumentMetadataStore
 {
     private readonly Dictionary<string, DocumentMetadata> store = new();
+    private bool isInitialized = false;
 
-    public Task InitializeAsync()
+    public Task CreateIfNotExistAsync()
     {
         // Nothing to do for in-memory store.
         return Task.CompletedTask;
@@ -16,6 +17,15 @@
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<DocumentMetadata> GetDocumentMetadataAsync(string documentId)
+    {
+        if (store.TryGetValue(documentId, out var documentMetadata))
+        {
+            return Task.FromResult(documentMetadata);
+        }
+        return Task.FromResult<DocumentMetadata>(null);
     }
 
     public Task<IEnumerable<DocumentMetadata>> GetNextDocumentsToProcessAsync(int count)
@@ -57,5 +67,16 @@
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task MarkAsInitializedAsync()
+    {
+        isInitialized = true;
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> IsInitializedAsync()
+    {
+        return Task.FromResult(isInitialized);
     }
 }

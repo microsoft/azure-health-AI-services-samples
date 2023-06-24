@@ -15,13 +15,11 @@ class Program
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
         using IHost host = CreateHostBuilder(args).Build();
         var processor = host.Services.GetRequiredService<HealthcareAnalysisProcessor>();
-        var dataset = host.Services.GetRequiredService<Dataset>();
         Logger = host.Services.GetRequiredService<ILogger<Program>>();
-        await dataset.InitializeAsync();
 
         try
         {
-            await processor.StartAsync(dataset);
+            await processor.StartAsync();
             Logger.LogInformation("Applicaiton completed successfully. exiting program in 10 seconds...");
             await Task.Delay(10000);
         }
@@ -61,7 +59,8 @@ class Program
             .Configure<Ta4hOptions>(configuraiton.GetSection("Ta4hOptions"))
             .Configure<DataProcessingOptions>(configuraiton.GetSection("DataProcessingOptions"))
             .AddFileStorage(configuraiton)
-            .AddSingleton<Dataset>()
+            .AddSingleton<IDocumentMetadataStore, InMemoryDocumentMetadataStore>()
+            .AddSingleton<IDataHandler, DataHandler>()
             .AddSingleton<TextAnalytics4HealthClient>()
             .AddSingleton<HealthcareAnalysisProcessor>();
              //.AddHttpClientWithPolicies();

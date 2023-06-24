@@ -3,7 +3,11 @@
     /// <summary>
     /// Initialize the data store if it doesn't exist.
     /// </summary>
-    Task InitializeAsync();
+    Task CreateIfNotExistAsync();
+
+    Task<DocumentMetadata> GetDocumentMetadataAsync(string documentId);
+
+    Task MarkAsInitializedAsync();
 
     /// <summary>
     /// Add a batch of entries to the data store.
@@ -24,4 +28,6 @@
     /// Update a batch of entries in the data store.
     /// </summary>
     Task UpdateEntriesAsync(IEnumerable<DocumentMetadata> entries);
+
+    Task<bool> IsInitializedAsync();
 }

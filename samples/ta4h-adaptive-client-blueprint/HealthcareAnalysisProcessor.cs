@@ -12,12 +12,14 @@ public class HealthcareAnalysisProcessor
     private readonly TimeSpan waitTimeWhenQueueIsEmpty = TimeSpan.FromMilliseconds(500);
     private readonly List<Tuple<QueueItem, TimeSpan>> _completedItems = new List<Tuple<QueueItem, TimeSpan>>();
     private readonly ILogger _logger;
+    private readonly IDataHandler _dataHandler;
     private readonly IFileStorage _outputStorage;
     private readonly DataProcessingOptions _dataProcessingOptions;
-    private Dataset dataset;
     private readonly object _lock = new object();
+    private bool _datasetCompleted = false;
 
     public HealthcareAnalysisProcessor(ILogger<HealthcareAnalysisProcessor> logger,
+                                       IDataHandler dataHandler,
                                        TextAnalytics4HealthClient textAnalyticsClient,
                                        FileStorageManager fileStorageManager,
                                        IOptions<DataProcessingOptions> dataProcessingOptions)
@@ -26,6 +28,7 @@ public class HealthcareAnalysisProcessor
 
         _outputStorage = fileStorageManager.OutputStorage;
         _logger = logger;
+        _dataHandler = dataHandler;
         _dataProcessingOptions = dataProcessingOptions.Value;
         MaxSize = _dataProcessingOptions.InitialQueueSize;
     }
@@ -36,30 +39,40 @@ public class HealthcareAnalysisProcessor
     public int MaxSize { get; private set; }
 
 
-    public async Task StartAsync(Dataset dataset)
+    public async Task StartAsync()
     {
+        
         _logger.LogInformation("StartAsync called");
-        this.dataset = dataset;
 
-        var queueProcessingTask = StartQueueProcessingAsync();
+        var queueProcessingTask = Task.Run(StartJobsQueueProcessingAsync);
 
         while (true)
         {
-            if (_jobsQueue.Count >= MaxSize)
+            List<Ta4hInputPayload> payloads = await _dataHandler.LoadNextBatchOfPayloadsAsync();
+            if (!payloads.Any()) 
             {
-                _logger.LogDebug("jobsQueueCount={jobsQueueCount} >= MaxSize={MaxSize}. waiting for next cycle", _jobsQueue.Count, MaxSize);
-                await Task.Delay(500);
-                continue;
-            }
-            var payload = await dataset.GetNextPayloadAsync();
-
-            if (!payload.Documents.Any())
-            {
+                _logger.LogInformation("No more payloads to send for processing, waiting for the jobs queue to complete");
+                _datasetCompleted = true;
                 break;
             }
-            await SendPaylodToProcessing(payload);
+            foreach (var payload in payloads)
+            {
+                _logger.LogInformation("payload");
+                await WaitForJobsQueueAsync();
+                await SendPaylodToProcessing(payload);
+            }            
         }
         await queueProcessingTask;
+    }
+
+    private async Task WaitForJobsQueueAsync()
+    {
+        while (_jobsQueue.Count >= MaxSize)
+        {
+            _logger.LogDebug("jobsQueueCount={jobsQueueCount} >= MaxSize={MaxSize}. waiting for next cycle", _jobsQueue.Count, MaxSize);
+            await Task.Delay(500);
+        }
+        return;
     }
 
     private async Task SendPaylodToProcessing(Ta4hInputPayload payload)
@@ -70,7 +83,7 @@ public class HealthcareAnalysisProcessor
     }
 
 
-    public async Task StartQueueProcessingAsync()
+    public async Task StartJobsQueueProcessingAsync()
     {
         while (true)
         {
@@ -81,14 +94,12 @@ public class HealthcareAnalysisProcessor
             }
             else
             {
-                if (dataset.IsComplete)
+                if (_datasetCompleted)
                 {
                     break;
                 }
-                else
-                {
-                    await Task.Delay(waitTimeWhenQueueIsEmpty);
-                }
+                _logger.LogDebug("No jobs is queue, will try again in {ms} ms.", waitTimeWhenQueueIsEmpty.TotalMilliseconds);
+                await Task.Delay(waitTimeWhenQueueIsEmpty);
             }
         }
         _logger.LogInformation("Completed processing all queue items");
