@@ -10,7 +10,7 @@ public class HealthcareAnalysisProcessor
     private readonly TextAnalytics4HealthClient _textAnalyticsClient;
     private readonly ConcurrentQueue<QueueItem> _jobsQueue = new();
     private readonly TimeSpan waitTimeWhenQueueIsEmpty = TimeSpan.FromMilliseconds(500);
-    private readonly List<Tuple<QueueItem, TimeSpan>> _completedItems = new List<Tuple<QueueItem, TimeSpan>>();
+    private readonly List<Tuple<QueueItem, TimeSpan>> _completedItems = new();
     private readonly ILogger _logger;
     private readonly IDataHandler _dataHandler;
     private readonly IFileStorage _outputStorage;
@@ -44,28 +44,28 @@ public class HealthcareAnalysisProcessor
         
         _logger.LogInformation("StartAsync called");
 
-        var queueProcessingTask = Task.Run(StartJobsQueueProcessingAsync);
+        var queueProcessingTask = StartJobsQueueProcessingAsync();
 
         while (true)
         {
-            List<Ta4hInputPayload> payloads = await _dataHandler.LoadNextBatchOfPayloadsAsync();
-            if (!payloads.Any()) 
+            var nextBatch = await _dataHandler.LoadNextBatchOfPayloadsAsync();
+            if (!nextBatch.Any()) 
             {
                 _logger.LogInformation("No more payloads to send for processing, waiting for the jobs queue to complete");
                 _datasetCompleted = true;
                 break;
             }
-            foreach (var payload in payloads)
+            foreach (var payload in nextBatch)
             {
                 _logger.LogInformation("payload");
-                await WaitForJobsQueueAsync();
-                await SendPaylodToProcessing(payload);
+                await WaitIfJobsQueueToBigAsync();
+                await SendPaylodToProcessing(payload); 
             }            
         }
         await queueProcessingTask;
     }
 
-    private async Task WaitForJobsQueueAsync()
+    private async Task WaitIfJobsQueueToBigAsync()
     {
         while (_jobsQueue.Count >= MaxSize)
         {
@@ -78,8 +78,10 @@ public class HealthcareAnalysisProcessor
     private async Task SendPaylodToProcessing(Ta4hInputPayload payload)
     {
         var jobId = await _textAnalyticsClient.StartHealthcareAnalysisOperationAsync(payload);
-        _jobsQueue.Enqueue(new QueueItem(jobId, payload.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(payload.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
+        payload.DocumentsMetadata.ForEach(m => { m.JobId = jobId; });
+        _jobsQueue.Enqueue(new QueueItem(payload, payload.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(payload.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
         _logger.LogDebug($"{DateTime.Now} :: Job {jobId} started : Sent {payload.Documents.Count} docs for processing: {string.Join('|', payload.Documents.Select(d => d.Id).ToArray())}");
+
     }
 
 
@@ -107,17 +109,17 @@ public class HealthcareAnalysisProcessor
 
     private async Task ProcessQueueItemAsync(QueueItem item)
     {
+        var jobId = item.Payload.DocumentsMetadata.First().JobId;
         if (DateTime.UtcNow < item.NextCheckDateTime)
         {
             if (item.LastCheckedDateTime < DateTime.UtcNow - TimeSpan.FromSeconds(5)) 
             {
-                _logger.LogDebug("JobId {item.JobId}: too early to check. will check status after {NextCheckDateTime}",  item.JobId, item.NextCheckDateTime);
+                _logger.LogDebug("JobId {jobId}: too early to check. will check status after {NextCheckDateTime}", jobId, item.NextCheckDateTime);
             }
             _jobsQueue.Enqueue(item with { LastCheckedDateTime = DateTime.UtcNow});
         }
         else
         {
-            var jobId = item.JobId;
             TextAnlyticsJobResponse response = await _textAnalyticsClient.GetHealthcareAnalysisOperationStatusAndResultsAsync(jobId);
             if (!JobStatus.IsTerminalStatus(response.Status))
             {
@@ -136,11 +138,28 @@ public class HealthcareAnalysisProcessor
             {
                 if (response.Status == JobStatus.Failed || response.Tasks.Items[0].Status == JobStatus.Failed)
                 {
-                    _logger.LogError($"ERROR: taks failed {item.JobId}");
+                    _logger.LogError("ERROR: task failed {jobId}", jobId);
+                    var ndocs = item.Payload.Documents.Count;
+                    if (item.Payload.Documents.Count > 1)
+                    {
+
+                        var firstHalf = new Ta4hInputPayload
+                        {
+                            Documents = item.Payload.Documents.Take(ndocs / 2).ToList(),
+                            DocumentsMetadata = item.Payload.DocumentsMetadata.Take(ndocs / 2).ToList()
+                        };
+                        var secondHalf = new Ta4hInputPayload
+                        {
+                            Documents = item.Payload.Documents.Skip(ndocs / 2).ToList(),
+                            DocumentsMetadata = item.Payload.DocumentsMetadata.Skip(ndocs / 2).ToList()
+                        };
+                        _jobsQueue.Enqueue(new QueueItem(firstHalf, firstHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(firstHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
+                        _jobsQueue.Enqueue(new QueueItem(secondHalf, secondHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(secondHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
+                    }
                 }
                 else
                 {
-                    _logger.LogInformation("JobId {item.JobId} completed successfully", item.JobId);
+                    _logger.LogInformation("JobId {jobId} completed successfully", jobId);
                     await ProcessSuccessfulJobAsync(item, response);
                 }
             }
@@ -155,7 +174,6 @@ public class HealthcareAnalysisProcessor
             _completedItems.Add(new(item, jobDuration));
             if (_completedItems.Count == MaxSize)
             {
-
                 var estiamtedMeanWaitTime = EstimateMeanWaitTimeForBatch();
                 var currentMaxSize = MaxSize;
                 int newMaxSize;
@@ -180,7 +198,7 @@ public class HealthcareAnalysisProcessor
                 _completedItems.Clear();
             }
         }
-        await StoreSuccessfulJobResultsAsync(response.Tasks.Items[0].Results);
+        await _dataHandler.StoreSuccessfulJobResultsAsync(item.Payload, response.Tasks.Items[0].Results);
     }
 
 
@@ -197,27 +215,6 @@ public class HealthcareAnalysisProcessor
         }
         var meanWaitTime = totalTime / count;
         return meanWaitTime;
-    }
-
-    private async Task StoreSuccessfulJobResultsAsync(HealthcareResults results)
-    {
-        try
-        {
-            var resultsStored = await BatchProcessor.ProcessInBatchesAsync(
-                results.Documents, results.Documents.Count > 10 ? 10 : results.Documents.Count, async (doc) =>
-                {
-                    var resultsFileName = doc.Id + ".json";
-                    await _outputStorage.SaveJsonFileAsync(doc, resultsFileName);
-                    return resultsFileName;
-                });
-        }
-        catch (AggregateException ae)
-        {
-            foreach (var ex in ae.InnerExceptions)
-            {
-                _logger.LogError(ex.StackTrace);
-            }
-        }
     }
 
     private TimeSpan GetEstimatedProcessingTime(int inputSize)

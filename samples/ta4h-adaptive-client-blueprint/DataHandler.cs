@@ -5,7 +5,9 @@ using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
 public class DataHandler : IDataHandler
 {
-    private readonly IFileStorage _fileStorage;
+    private readonly IFileStorage _inputFileStorage;
+    private readonly IFileStorage _outputFileStorage;
+
 
     private Ta4hOptions _options;
     private DataProcessingOptions _dataProcessingOptions;
@@ -15,7 +17,8 @@ public class DataHandler : IDataHandler
 
     public DataHandler(ILogger<DataHandler> logger, FileStorageManager fileStorageManager, IDocumentMetadataStore metadataStore, IOptions<Ta4hOptions> options, IOptions<DataProcessingOptions> dataProcessingOptions)
     {
-        _fileStorage = fileStorageManager.InputStorage;
+        _inputFileStorage = fileStorageManager.InputStorage;
+        _outputFileStorage = fileStorageManager.OutputStorage;
         _metadataStore = metadataStore;
         _options = options.Value;
         _dataProcessingOptions = dataProcessingOptions.Value;
@@ -37,6 +40,36 @@ public class DataHandler : IDataHandler
         return payloads;
     }
 
+    public async Task StoreSuccessfulJobResultsAsync(Ta4hInputPayload payload, HealthcareResults results)
+    {
+        try
+        {
+            var resultsStored = await BatchProcessor.ProcessInBatchesAsync(
+                results.Documents, results.Documents.Count > 10 ? 10 : results.Documents.Count, async (doc) =>
+                {
+                    var resultsFileName = doc.Id + ".json";
+                    await _outputFileStorage.SaveJsonFileAsync(doc, resultsFileName);
+                    return resultsFileName;
+                });
+        }
+        catch (AggregateException ae)
+        {
+            foreach (var ex in ae.InnerExceptions)
+            {
+                _logger.LogError("error in SaveJsonFileAsync: {ex}", ex.ToString());
+            }
+        }
+        try
+        {
+            payload.DocumentsMetadata.ForEach(m => m.Status = ProcessingStatus.Succeeded);
+            await _metadataStore.UpdateEntriesAsync(payload.DocumentsMetadata);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("error in UpdateEntriesAsync: {ex}", ex.ToString());
+        }
+    }
+
 
     private async Task EnsureInitializedAsync()
     {
@@ -48,7 +81,7 @@ public class DataHandler : IDataHandler
         var isInitialized = await _metadataStore.IsInitializedAsync();
         if (!isInitialized)
         {
-            var fileNames = await _fileStorage.EnumerateFilesRecursiveAsync();
+            var fileNames = await _inputFileStorage.EnumerateFilesRecursiveAsync();
             fileNames = fileNames.Where(fn => fn.EndsWith(".txt"));
             _logger.LogInformation("found {nfiles} files", fileNames.Count());
             var batch = new List<DocumentMetadata>();
@@ -81,35 +114,28 @@ public class DataHandler : IDataHandler
 
     private async Task<TextDocumentInput> ReadDocumentFromStorage(DocumentMetadata documentMetadata)
     {
-        var text = await _fileStorage.ReadTextFileAsync(documentMetadata.InputPath);
+        var text = await _inputFileStorage.ReadTextFileAsync(documentMetadata.InputPath);
         var docId = documentMetadata.DocumentId;
         _logger.LogDebug("Read document {docId}", docId);
         var language = _options.Language;
         return new TextDocumentInput(docId, text) { Language = language };
     }
 
-    private List<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc>)
+    private List<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> documents)
     {
         int maxCharactersPerRequest = _options.MaxCharactersPerRequest;
         int maxDocsPerRequest = _options.MaxDocsPerRequest;
         var random = new Random();
         var result = new List<Ta4hInputPayload>();
 
-        Ta4hInputPayload nextPayload = new()
-        {
-            Documents = new()
-        };
-        docs = docs.ToList();
+        Ta4hInputPayload nextPayload = new();
 
-        foreach (var doc in docs)
+        foreach (var (metadata, doc) in documents)
         {
             if (nextPayload.Documents.Count == maxDocsPerRequest || nextPayload.TotalCharLength + doc.Text.Length >= maxCharactersPerRequest)
             {
                 result.Add(nextPayload);
-                nextPayload = new()
-                {
-                    Documents = new()
-                };
+                nextPayload = new();
                 if (_options.RandomizeRequestSize)
                 {
                     maxDocsPerRequest = random.Next(1, _options.MaxDocsPerRequest);
@@ -118,6 +144,7 @@ public class DataHandler : IDataHandler
             else
             {
                 nextPayload.Documents.Add(doc);
+                nextPayload.DocumentsMetadata.Add(metadata);
             }
         }
         if (nextPayload.Documents.Any())

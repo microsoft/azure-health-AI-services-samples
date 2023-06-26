@@ -56,7 +56,6 @@ public class TextAnalytics4HealthClient
         response.Headers.TryGetValues(OperationLocationHeaderName, out var values);
         var operationLocation = values.FirstOrDefault();
         var jobId = operationLocation.Split("?")[0].Split("/").Last();
-        payload.JobId = jobId;
         return jobId;
     }
 
