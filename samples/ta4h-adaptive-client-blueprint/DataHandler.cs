@@ -28,7 +28,7 @@ public class DataHandler : IDataHandler
     public async Task<List<Ta4hInputPayload>> LoadNextBatchOfPayloadsAsync()
     {
         await EnsureInitializedAsync();
-        var docsMetadata = await _metadataStore.GetNextDocumentsToProcessAsync(_dataProcessingOptions.MaxBatchSize);
+        var docsMetadata = await _metadataStore.GetNextDocumentsForProcessAsync(_dataProcessingOptions.MaxBatchSize);
         _logger.LogInformation("start next batch - {count} docs for processing", docsMetadata.Count());
         var docs = await BatchProcessor.ProcessInBatchesAsync(
             docsMetadata, 10, ReadDocumentFromStorage);

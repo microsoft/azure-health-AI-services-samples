@@ -28,7 +28,7 @@
         return Task.FromResult<DocumentMetadata>(null);
     }
 
-    public Task<IEnumerable<DocumentMetadata>> GetNextDocumentsToProcessAsync(int count)
+    public Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int count)
     {
         var nextDocuments = store.Values
             .Where(e => e.Status == ProcessingStatus.NotStarted)

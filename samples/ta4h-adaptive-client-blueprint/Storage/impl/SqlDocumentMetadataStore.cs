@@ -26,7 +26,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         var tableCheckCommandText = $@"
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{TableName}')
         CREATE TABLE {TableName} (
-                    {Id} nvarchar(450) PRIMARY KEY,
+                    {Id} nvarchar(2048) PRIMARY KEY,
                     {InputPath} nvarchar(max) NOT NULL,
                     {Status} int NOT NULL,
                     {LastModified} datetime2 NOT NULL,
@@ -37,7 +37,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         await tableCheckCommand.ExecuteNonQueryAsync();
     }
 
-    public async Task<IEnumerable<DocumentMetadata>> GetNextDocumentsToProcessAsync(int batchSize)
+    public async Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int batchSize)
     {
         var entries = new List<DocumentMetadata>();
 
@@ -45,12 +45,19 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         await connection.OpenAsync();
 
         using var command = new SqlCommand($@"
-            SELECT TOP (@BatchSize) {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath} 
-            FROM {TableName} 
-            WHERE {Status} = @Status", connection);
+        WITH cte AS (
+            SELECT TOP (@BatchSize) {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}
+            FROM {TableName}
+            WHERE {Status} = @Status
+            ORDER BY {LastModified}
+        )
+        UPDATE cte
+        SET {Status} = @NewStatus
+        OUTPUT INSERTED.{Id}, INSERTED.{InputPath}, INSERTED.{Status}, INSERTED.{LastModified}, INSERTED.{ResultsPath}", connection);
 
         command.Parameters.AddWithValue("@BatchSize", batchSize);
         command.Parameters.AddWithValue("@Status", (int)ProcessingStatus.NotStarted);
+        command.Parameters.AddWithValue("@NewStatus", (int)ProcessingStatus.Processing);
 
         using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -166,21 +173,22 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         {
             using var command = new SqlCommand($@"
             INSERT INTO {TableName} ({Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}) 
-            VALUES (@Id, @BlobStorageUrl, @Status, @LastModified, @ProcessingResultLocation)", connection);
+            VALUES (@Id, @InputPath, @Status, @LastModified, @ResultsPath)", connection);
 
             command.Parameters.AddWithValue("@Id", entry.DocumentId);
-            command.Parameters.AddWithValue("@BlobStorageUrl", entry.InputPath);
+            command.Parameters.AddWithValue("@InputPath", entry.InputPath);
             command.Parameters.AddWithValue("@Status", (int)entry.Status);
             command.Parameters.AddWithValue("@LastModified", entry.LastModified);
-            command.Parameters.AddWithValue("@ProcessingResultLocation", entry.ResultsPath);
+            command.Parameters.AddWithValue("@ResultsPath", entry.ResultsPath);
 
             await command.ExecuteNonQueryAsync();
         }
     }
 
 
-    public Task<bool> IsInitializedAsync()
+    public async Task<bool> IsInitializedAsync()
     {
-        throw new NotImplementedException();
+        var specialEntry = await GetDocumentMetadataAsync(InitializeDbEntryName);
+        return specialEntry != null;
     }
 }

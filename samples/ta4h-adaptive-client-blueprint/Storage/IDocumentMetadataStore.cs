@@ -17,7 +17,7 @@
     /// <summary>
     /// Get the next batch of documents to process and mark them as 'Processing'.
     /// </summary>
-    Task<IEnumerable<DocumentMetadata>> GetNextDocumentsToProcessAsync(int count);
+    Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int count);
 
     /// <summary>
     /// Update a single entry in the data store.
