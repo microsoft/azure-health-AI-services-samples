@@ -47,9 +47,9 @@ public class DataHandler : IDataHandler
             var resultsStored = await BatchProcessor.ProcessInBatchesAsync(
                 results.Documents, results.Documents.Count > 10 ? 10 : results.Documents.Count, async (doc) =>
                 {
-                    var resultsFileName = doc.Id + ".json";
-                    await _outputFileStorage.SaveJsonFileAsync(doc, resultsFileName);
-                    return resultsFileName;
+                    var docMetadata = payload.DocumentsMetadata.First(d => d.DocumentId == doc.Id);
+                    await _outputFileStorage.SaveJsonFileAsync(doc, docMetadata.ResultsPath);
+                    return docMetadata.ResultsPath;
                 });
         }
         catch (AggregateException ae)
@@ -92,7 +92,8 @@ public class DataHandler : IDataHandler
                     DocumentId = string.Join("/", filename.Split(Path.DirectorySeparatorChar)).Replace(".txt", ""),
                     InputPath = filename,
                     LastModified = DateTime.UtcNow,
-                    Status = ProcessingStatus.NotStarted
+                    Status = ProcessingStatus.NotStarted,
+                    ResultsPath = filename.Replace(".txt", ".result.json")
                 };
                 batch.Add(entry);
                 if (batch.Count > 100)
@@ -106,8 +107,9 @@ public class DataHandler : IDataHandler
             {
                 await _metadataStore.AddEntriesAsync(batch);
             }
+            await _metadataStore.MarkAsInitializedAsync();
         }
-        await _metadataStore.MarkAsInitializedAsync();
+        
         initializationComplete = true;
     }
 

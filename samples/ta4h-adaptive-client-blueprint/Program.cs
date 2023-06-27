@@ -59,7 +59,7 @@ class Program
             .Configure<Ta4hOptions>(configuraiton.GetSection("Ta4hOptions"))
             .Configure<DataProcessingOptions>(configuraiton.GetSection("DataProcessingOptions"))
             .AddFileStorage(configuraiton)
-            .AddSingleton<IDocumentMetadataStore, InMemoryDocumentMetadataStore>()
+            .AddMetadataStorage(configuraiton)
             .AddSingleton<IDataHandler, DataHandler>()
             .AddSingleton<TextAnalytics4HealthClient>()
             .AddSingleton<HealthcareAnalysisProcessor>();

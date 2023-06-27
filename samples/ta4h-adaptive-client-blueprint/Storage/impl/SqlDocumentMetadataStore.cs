@@ -159,7 +159,9 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         {
             DocumentId = InitializeDbEntryName,
             Status = ProcessingStatus.Succeeded,
-            LastModified = DateTime.UtcNow
+            LastModified = DateTime.UtcNow,
+            InputPath = "N/A",
+            ResultsPath = "N/A"
         };
         await AddEntriesAsync(new[] { specialEntry });
     }

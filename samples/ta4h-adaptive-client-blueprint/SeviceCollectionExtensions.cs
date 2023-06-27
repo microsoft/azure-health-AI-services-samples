@@ -12,6 +12,8 @@ public static class SeviceCollectionExtensions
 
     const string FileSystem = "FileSystem";
     const string AzureBlob = "AzureBlob";
+    const string InMemory = "InMemory";
+    const string SQL = "SQL";
 
     public static IServiceCollection AddFileStorage(this IServiceCollection services, IConfiguration configuration)
     {
@@ -51,6 +53,30 @@ public static class SeviceCollectionExtensions
             InputStorage = inputFileStorage,
             OutputStorage = outputFileStorage
         });
+        return services;
+    }
+
+    public static IServiceCollection AddMetadataStorage(this IServiceCollection services, IConfiguration configuration)
+    {
+        var configKey = "MetadataStorage:StorageType";
+        var metadataStorageType = configuration[configKey];
+        if (metadataStorageType == InMemory)
+        {
+            services.AddSingleton<IDocumentMetadataStore>(new InMemoryDocumentMetadataStore());
+        }
+        else if (metadataStorageType == SQL)
+        {
+            var connstring = configuration["MetadataStorage:SQLSettings:ConnectionString"];
+            services.AddSingleton<IDocumentMetadataStore>(new SqlDocumentMetadataStore(connstring));
+        }
+        else if (metadataStorageType == null)
+        {
+            throw new ArgumentException($"Configurtion field ${configKey} must be defined.");
+        }
+        else
+        {
+            throw new Exception($"{metadataStorageType} is not a vaild vaule for Configurtion field {configKey}. Supported values are {InMemory}, {SQL}");
+        }    
         return services;
     }
 
