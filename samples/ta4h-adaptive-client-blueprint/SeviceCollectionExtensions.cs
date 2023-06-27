@@ -71,11 +71,11 @@ public static class SeviceCollectionExtensions
         }
         else if (metadataStorageType == null)
         {
-            throw new ArgumentException($"Configurtion field ${configKey} must be defined.");
+            throw new ArgumentException($"Configurtion field ${configKey} must be defined. Supported values are {InMemory}, {SQL}");
         }
         else
         {
-            throw new Exception($"{metadataStorageType} is not a vaild vaule for Configurtion field {configKey}. Supported values are {InMemory}, {SQL}");
+            throw new Exception($"{metadataStorageType} is not a vaild vaule for Configurtion field {configKey}. Supported values are {InMemory}, {SQL}.");
         }    
         return services;
     }

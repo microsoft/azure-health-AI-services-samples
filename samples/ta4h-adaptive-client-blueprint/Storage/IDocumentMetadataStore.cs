@@ -24,10 +24,7 @@
     /// </summary>
     Task UpdateEntryAsync(DocumentMetadata entry);
 
-    /// <summary>
-    /// Update a batch of entries in the data store.
-    /// </summary>
-    Task UpdateEntriesAsync(IEnumerable<DocumentMetadata> entries);
 
     Task<bool> IsInitializedAsync();
+    Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus);
 }

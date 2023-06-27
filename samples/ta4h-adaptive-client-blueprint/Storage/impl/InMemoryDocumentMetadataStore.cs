@@ -54,21 +54,6 @@
         return Task.CompletedTask;
     }
 
-    public Task UpdateEntriesAsync(IEnumerable<DocumentMetadata> entries)
-    {
-        foreach (var entry in entries)
-        {
-            if (!store.ContainsKey(entry.DocumentId))
-            {
-                throw new KeyNotFoundException($"Document {entry.DocumentId} not found in the store.");
-            }
-
-            store[entry.DocumentId] = entry;
-        }
-
-        return Task.CompletedTask;
-    }
-
     public Task MarkAsInitializedAsync()
     {
         isInitialized = true;
@@ -78,5 +63,11 @@
     public Task<bool> IsInitializedAsync()
     {
         return Task.FromResult(isInitialized);
+    }
+
+    public Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus)
+    {
+        entries.ForEach(entry => { entry.Status = newStatus; });
+        return Task.CompletedTask;
     }
 }

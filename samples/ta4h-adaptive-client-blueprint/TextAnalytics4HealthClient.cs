@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System.Diagnostics;
 using System.Net;
 using System.Text;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
@@ -89,8 +88,9 @@ public class TextAnalytics4HealthClient
                 }
                 return response;
             }
-            catch (HttpException httpException) when (httpException.StatusCode == HttpStatusCode.TooManyRequests && ++attemptsCounter < maxAttemps)
+            catch (HttpException httpException) when (httpException.StatusCode == HttpStatusCode.TooManyRequests && attemptsCounter < maxAttemps)
             {
+                attemptsCounter++;
                 lastException = httpException;
                 var jitterer = new Random(request.RequestUri.OriginalString.GetHashCode());
                 var tryAgainInSeconds = jitterer.Next(15, 30);
@@ -98,7 +98,7 @@ public class TextAnalytics4HealthClient
                 await Task.Delay(TimeSpan.FromSeconds(tryAgainInSeconds));
                 _logger.LogInformation("Waited to retry for {tryAgainInSeconds}, ready to try again", tryAgainInSeconds);
             }
-            catch (TaskCanceledException taskCancelledException)
+            catch (TaskCanceledException taskCancelledException) when (attemptsCounter < maxAttemps)
             {
                 attemptsCounter++;
                 var tryAgainInSeconds = 1;

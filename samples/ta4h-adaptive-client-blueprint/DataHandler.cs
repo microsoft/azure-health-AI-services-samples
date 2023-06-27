@@ -61,8 +61,8 @@ public class DataHandler : IDataHandler
         }
         try
         {
-            payload.DocumentsMetadata.ForEach(m => m.Status = ProcessingStatus.Succeeded);
-            await _metadataStore.UpdateEntriesAsync(payload.DocumentsMetadata);
+            _logger.LogDebug("Updating docs metadata from job id {jobId}: doc ids = {docids}", payload.DocumentsMetadata.First().JobId, string.Join(" | ", payload.DocumentsMetadata.Select(m => m.DocumentId)));
+            await _metadataStore.UpdateEntriesStatusAsync(payload.DocumentsMetadata, ProcessingStatus.Succeeded);
         }
         catch (Exception ex)
         {
@@ -138,9 +138,11 @@ public class DataHandler : IDataHandler
             {
                 result.Add(nextPayload);
                 nextPayload = new();
+                nextPayload.Documents.Add(doc);
+                nextPayload.DocumentsMetadata.Add(metadata);
                 if (_options.RandomizeRequestSize)
                 {
-                    maxDocsPerRequest = random.Next(1, _options.MaxDocsPerRequest);
+                    maxDocsPerRequest = random.Next(2, _options.MaxDocsPerRequest + 1);
                 }
             }
             else
@@ -153,6 +155,7 @@ public class DataHandler : IDataHandler
         {
             result.Add(nextPayload);
         }
+        _logger.LogInformation($"Completed batching, {documents.Count()}, {result.Sum(r => r.Documents.Count)}");
         return result;
     }
 }

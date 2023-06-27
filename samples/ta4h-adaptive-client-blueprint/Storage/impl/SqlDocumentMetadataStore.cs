@@ -1,4 +1,6 @@
-﻿using System.Data.SqlClient;
+﻿using System.Data;
+using System.Data.SqlClient;
+using System.Text;
 
 public class SqlDocumentMetadataStore : IDocumentMetadataStore
 {
@@ -126,30 +128,36 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         return null;
     }
 
-    public async Task UpdateEntriesAsync(IEnumerable<DocumentMetadata> entries)
+
+    public async Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus)
     {
+        var newLastModified = DateTime.UtcNow;
+        var parameters = new StringBuilder();
+        for (var i = 0; i < entries.Count(); i++)
+        {
+            entries[i].Status = newStatus;
+            entries[i].LastModified = newLastModified;
+            parameters.Append($"@Id{i},");
+        }
+        parameters.Length--;  // remove last comma
+
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
-        foreach (var entry in entries)
-        {
-            using var command = new SqlCommand($@"
-                UPDATE {TableName} 
-                SET 
-                    {InputPath} = @InputPath,
-                    {Status} = @Status,
-                    {LastModified} = @LastModified,
-                    {ResultsPath} = @ResultsPath
-                WHERE {Id} = @Id", connection);
+        using var command = new SqlCommand($@"
+        UPDATE {TableName} 
+        SET 
+            {Status} = @Status,
+            {LastModified} = @LastModified
+        WHERE {Id} IN ({parameters.ToString()})", connection);
 
-            command.Parameters.AddWithValue("@Id", entry.DocumentId);
-            command.Parameters.AddWithValue("@InputPath", entry.InputPath);
-            command.Parameters.AddWithValue("@Status", (int)entry.Status);
-            command.Parameters.AddWithValue("@LastModified", entry.LastModified);
-            command.Parameters.AddWithValue("@ResultsPath", entry.ResultsPath);
+        
 
-            await command.ExecuteNonQueryAsync();
-        }
+        var idParams = entries.Select((e, i) => new SqlParameter($"@Id{i}", e.DocumentId)).ToArray();
+        command.Parameters.AddRange(idParams);
+        command.Parameters.AddWithValue("@Status", (int)newStatus);
+        command.Parameters.AddWithValue("@LastModified", newLastModified);
+        await command.ExecuteNonQueryAsync();
     }
 
 
@@ -168,22 +176,28 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     public async Task AddEntriesAsync(IEnumerable<DocumentMetadata> entries)
     {
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
+        var table = new DataTable();
+        table.Columns.Add(Id, typeof(string));
+        table.Columns.Add(InputPath, typeof(string));
+        table.Columns.Add(Status, typeof(int));
+        table.Columns.Add(LastModified, typeof(DateTime));
+        table.Columns.Add(ResultsPath, typeof(string));
 
         foreach (var entry in entries)
         {
-            using var command = new SqlCommand($@"
-            INSERT INTO {TableName} ({Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}) 
-            VALUES (@Id, @InputPath, @Status, @LastModified, @ResultsPath)", connection);
+            table.Rows.Add(entry.DocumentId, entry.InputPath, (int)entry.Status, entry.LastModified, entry.ResultsPath);
+        }
 
-            command.Parameters.AddWithValue("@Id", entry.DocumentId);
-            command.Parameters.AddWithValue("@InputPath", entry.InputPath);
-            command.Parameters.AddWithValue("@Status", (int)entry.Status);
-            command.Parameters.AddWithValue("@LastModified", entry.LastModified);
-            command.Parameters.AddWithValue("@ResultsPath", entry.ResultsPath);
+        using var bulkCopy = new SqlBulkCopy(connectionString);
+        bulkCopy.DestinationTableName = TableName;
 
-            await command.ExecuteNonQueryAsync();
+        try
+        {
+            await bulkCopy.WriteToServerAsync(table);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
         }
     }
 
