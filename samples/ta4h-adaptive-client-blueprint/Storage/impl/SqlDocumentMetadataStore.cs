@@ -5,7 +5,7 @@ using System.Text;
 public class SqlDocumentMetadataStore : IDocumentMetadataStore
 {
     private readonly string connectionString;
-    private const string TableName = "DocumentMetadata";
+    
     private const string Id = nameof(DocumentMetadata.DocumentId);
     private const string InputPath = nameof(DocumentMetadata.InputPath);
     private const string Status = nameof(DocumentMetadata.Status);
@@ -14,10 +14,13 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     private const string InitializeDbEntryName = "ta4hclientappisinitialized";
 
-    public SqlDocumentMetadataStore(string connectionString)
+    public SqlDocumentMetadataStore(SQLMetadataStorageSettings dbSettings)
     {
-        this.connectionString = connectionString;
+        this.connectionString = dbSettings.ConnectionString;
+        TableName = dbSettings.TableName;
     }
+
+    private string TableName { get; }
 
     public async Task CreateIfNotExistAsync()
     {

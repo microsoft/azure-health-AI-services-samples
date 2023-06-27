@@ -66,8 +66,10 @@ public static class SeviceCollectionExtensions
         }
         else if (metadataStorageType == SQL)
         {
-            var connstring = configuration["MetadataStorage:SQLSettings:ConnectionString"];
-            services.AddSingleton<IDocumentMetadataStore>(new SqlDocumentMetadataStore(connstring));
+            var settingsSection = "MetadataStorage:SQLSettings";
+            var section = configuration.GetSection(settingsSection) ?? throw new ArgumentException($"{settingsSection} must be defined");
+            var dbSettings = section.Get<SQLMetadataStorageSettings>();
+            services.AddSingleton<IDocumentMetadataStore>(new SqlDocumentMetadataStore(dbSettings));
         }
         else if (metadataStorageType == null)
         {
