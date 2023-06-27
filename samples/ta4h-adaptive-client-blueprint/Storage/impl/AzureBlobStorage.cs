@@ -20,7 +20,8 @@ public class AzureBlobStorage : IFileStorage
         };
     }
 
-    public async Task<IEnumerable<string>> EnumerateFilesAsync(string prefix = "")
+
+    public async Task<IEnumerable<string>> EnumerateFilesRecursiveAsync(string prefix = "")
     {
         var blobs = new List<string>();
 
@@ -39,11 +40,6 @@ public class AzureBlobStorage : IFileStorage
         return blobs;
     }
 
-    public async Task<IEnumerable<string>> EnumerateFilesRecursiveAsync(string prefix = "")
-    {
-        return await EnumerateFilesAsync(prefix);
-    }
-
     public async Task<string> ReadTextFileAsync(string blobName)
     {
         var blobClient = _containerClient.GetBlobClient(blobName);
@@ -60,37 +56,6 @@ public class AzureBlobStorage : IFileStorage
         }
     }
 
-    public async Task<T> ReadJsonFileAsync<T>(string blobName)
-    {
-        var blobClient = _containerClient.GetBlobClient(blobName);
-
-        try
-        {
-            var response = await blobClient.DownloadContentAsync();
-            var content = response.Value.Content.ToString();
-            return JsonSerializer.Deserialize<T>(content);
-        }
-        catch (RequestFailedException ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-            return default;
-        }
-    }
-
-    public async Task SaveTextFileAsync(string text, string blobName)
-    {
-        var blobClient = _containerClient.GetBlobClient(blobName);
-
-        try
-        {
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-            await blobClient.UploadAsync(stream, true);
-        }
-        catch (RequestFailedException ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
-    }
 
     public async Task SaveJsonFileAsync<T>(T obj, string blobName)
     {
@@ -108,32 +73,4 @@ public class AzureBlobStorage : IFileStorage
         }
     }
 
-    public async Task DeleteFileAsync(string blobName)
-    {
-        var blobClient = _containerClient.GetBlobClient(blobName);
-
-        try
-        {
-            await blobClient.DeleteIfExistsAsync();
-        }
-        catch (RequestFailedException ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
-    }
-
-    public async Task<bool> FileExistsAsync(string blobName)
-    {
-        var blobClient = _containerClient.GetBlobClient(blobName);
-
-        try
-        {
-            return await blobClient.ExistsAsync();
-        }
-        catch (RequestFailedException ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-            return false;
-        }
-    }
 }

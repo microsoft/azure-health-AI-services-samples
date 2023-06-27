@@ -39,6 +39,10 @@ public static class SeviceCollectionExtensions
                 var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>();
                 return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.ContainerName);
             }
+            else if (storageType == "Noop")
+            {
+                return new NoopStorage();
+            }
             else
             {
                 throw new Exception($"{storageType} is not a vaild vaule for {configSection}:StorageType. Supported values are {FileSystem}, {AzureBlob}");
