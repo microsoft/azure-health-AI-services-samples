@@ -30,19 +30,17 @@ public class HealthcareAnalysisProcessor
         _logger = logger;
         _dataHandler = dataHandler;
         _dataProcessingOptions = dataProcessingOptions.Value;
-        MaxSize = _dataProcessingOptions.InitialQueueSize;
+        MaxAllowedPendingJobsSize = _dataProcessingOptions.InitialQueueSize;
     }
 
 
-    public int Count => _jobsQueue.Count;
-
-    public int MaxSize { get; private set; }
+    public int MaxAllowedPendingJobsSize { get; private set; }
 
 
     public async Task StartAsync()
     {
         
-        _logger.LogInformation("StartAsync called");
+        _logger.LogInformation($"{nameof(StartAsync)} called");
 
         var queueProcessingTask = StartJobsQueueProcessingAsync();
 
@@ -57,7 +55,6 @@ public class HealthcareAnalysisProcessor
             }
             foreach (var payload in nextBatch)
             {
-                _logger.LogInformation("payload");
                 await WaitIfJobsQueueToBigAsync();
                 await SendPaylodToProcessing(payload); 
             }            
@@ -67,9 +64,9 @@ public class HealthcareAnalysisProcessor
 
     private async Task WaitIfJobsQueueToBigAsync()
     {
-        while (_jobsQueue.Count >= MaxSize)
+        while (_jobsQueue.Count >= MaxAllowedPendingJobsSize)
         {
-            _logger.LogDebug("jobsQueueCount={jobsQueueCount} >= MaxSize={MaxSize}. waiting for next cycle", _jobsQueue.Count, MaxSize);
+            _logger.LogDebug("jobsQueueCount={jobsQueueCount} >= MaxSize={MaxSize}. waiting for next cycle", _jobsQueue.Count, MaxAllowedPendingJobsSize);
             await Task.Delay(500);
         }
         return;
@@ -139,23 +136,7 @@ public class HealthcareAnalysisProcessor
                 if (response.Status == JobStatus.Failed || response.Tasks.Items[0].Status == JobStatus.Failed)
                 {
                     _logger.LogError("ERROR: task failed {jobId}", jobId);
-                    var ndocs = item.Payload.Documents.Count;
-                    if (item.Payload.Documents.Count > 1)
-                    {
-
-                        var firstHalf = new Ta4hInputPayload
-                        {
-                            Documents = item.Payload.Documents.Take(ndocs / 2).ToList(),
-                            DocumentsMetadata = item.Payload.DocumentsMetadata.Take(ndocs / 2).ToList()
-                        };
-                        var secondHalf = new Ta4hInputPayload
-                        {
-                            Documents = item.Payload.Documents.Skip(ndocs / 2).ToList(),
-                            DocumentsMetadata = item.Payload.DocumentsMetadata.Skip(ndocs / 2).ToList()
-                        };
-                        _jobsQueue.Enqueue(new QueueItem(firstHalf, firstHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(firstHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
-                        _jobsQueue.Enqueue(new QueueItem(secondHalf, secondHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(secondHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
-                    }
+                    RequeueFailedDocuments(item);
                 }
                 else
                 {
@@ -166,24 +147,45 @@ public class HealthcareAnalysisProcessor
         }
     }
 
+    private void RequeueFailedDocuments(QueueItem item)
+    {
+        var ndocs = item.Payload.Documents.Count;
+        if (item.Payload.Documents.Count > 1)
+        {
+
+            var firstHalf = new Ta4hInputPayload
+            {
+                Documents = item.Payload.Documents.Take(ndocs / 2).ToList(),
+                DocumentsMetadata = item.Payload.DocumentsMetadata.Take(ndocs / 2).ToList()
+            };
+            var secondHalf = new Ta4hInputPayload
+            {
+                Documents = item.Payload.Documents.Skip(ndocs / 2).ToList(),
+                DocumentsMetadata = item.Payload.DocumentsMetadata.Skip(ndocs / 2).ToList()
+            };
+            _jobsQueue.Enqueue(new QueueItem(firstHalf, firstHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(firstHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
+            _jobsQueue.Enqueue(new QueueItem(secondHalf, secondHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(secondHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
+        }
+    }
+
     private async Task ProcessSuccessfulJobAsync(QueueItem item, TextAnlyticsJobResponse response)
     {
         TimeSpan jobDuration = response.LastUpdatedDateTime - response.CreatedDateTime;
         lock (_lock)
         {
             _completedItems.Add(new(item, jobDuration));
-            if (_completedItems.Count == MaxSize)
+            if (_completedItems.Count == MaxAllowedPendingJobsSize)
             {
                 var estiamtedMeanWaitTime = EstimateMeanWaitTimeForBatch();
-                var currentMaxSize = MaxSize;
+                var currentMaxSize = MaxAllowedPendingJobsSize;
                 int newMaxSize;
                 if (estiamtedMeanWaitTime < TimeSpan.FromSeconds(60))
                 {
-                    newMaxSize = MaxSize * 2;
+                    newMaxSize = MaxAllowedPendingJobsSize * 2;
                 }
                 else
                 {
-                    newMaxSize = (int)(MaxSize * (TimeSpan.FromSeconds(90) / estiamtedMeanWaitTime));
+                    newMaxSize = (int)(MaxAllowedPendingJobsSize * (TimeSpan.FromSeconds(90) / estiamtedMeanWaitTime));
                 }
                 if (newMaxSize > 300)
                 {
@@ -193,8 +195,8 @@ public class HealthcareAnalysisProcessor
                 {
                     newMaxSize = 1;
                 }
-                MaxSize = newMaxSize;
-                _logger.LogInformation("estiamtedMeanWaitTime: {estiamtedMeanWaitTime}, currentMaxSize: {currentMaxSize}, nextMaxSize: {MaxSize}", estiamtedMeanWaitTime, currentMaxSize, MaxSize);
+                MaxAllowedPendingJobsSize = newMaxSize;
+                _logger.LogInformation("estiamtedMeanWaitTime: {estiamtedMeanWaitTime}, currentMaxSize: {currentMaxSize}, nextMaxSize: {MaxSize}", estiamtedMeanWaitTime, currentMaxSize, MaxAllowedPendingJobsSize);
                 _completedItems.Clear();
             }
         }

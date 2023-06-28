@@ -12,8 +12,11 @@ public static class SeviceCollectionExtensions
 
     const string FileSystem = "FileSystem";
     const string AzureBlob = "AzureBlob";
+    const string Noop = "Noop";
+    static string[] FileStorageValidTypes = new[] { FileSystem, AzureBlob, Noop };
     const string InMemory = "InMemory";
     const string SQL = "SQL";
+    static string[] MetadataStorageValidTypes = new[] { InMemory, SQL};
 
     public static IServiceCollection AddFileStorage(this IServiceCollection services, IConfiguration configuration)
     {
@@ -21,31 +24,27 @@ public static class SeviceCollectionExtensions
         IFileStorage getFileStorage(string configSection)
         {
             var storageType = configuration[$"{configSection}:StorageType"];
-            if (storageType == null)
-            {
-                throw new ArgumentNullException(nameof(storageType));
-            }
-            else if (storageType == "FileSystem")
+            if (storageType == FileSystem)
             {
                 var settingsSection = $"{configSection}:FileSystemSettings";
-                var section = configuration.GetSection(settingsSection) ?? throw new ArgumentException($"{settingsSection} must be defined");
+                var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
                 var fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
                 return new FileSystemStorage(fileSystemStorageSettings.BasePath);
             }
-            else if (storageType == "AzureBlob")
+            else if (storageType == AzureBlob)
             {
                 var settingsSection = $"{configSection}:AzureBlobSettings";
-                var section = configuration.GetSection(settingsSection) ?? throw new ArgumentException($"{settingsSection} must be defined");
+                var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
                 var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>();
                 return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.ContainerName);
             }
-            else if (storageType == "Noop")
+            else if (storageType == Noop)
             {
                 return new NoopStorage();
             }
             else
             {
-                throw new Exception($"{storageType} is not a vaild vaule for {configSection}:StorageType. Supported values are {FileSystem}, {AzureBlob}");
+                throw new ConfigurationException($"{configSection}:StorageType", storageType, FileStorageValidTypes);
             }
         }
 
@@ -71,17 +70,13 @@ public static class SeviceCollectionExtensions
         else if (metadataStorageType == SQL)
         {
             var settingsSection = "MetadataStorage:SQLSettings";
-            var section = configuration.GetSection(settingsSection) ?? throw new ArgumentException($"{settingsSection} must be defined");
+            var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
             var dbSettings = section.Get<SQLMetadataStorageSettings>();
             services.AddSingleton<IDocumentMetadataStore>(new SqlDocumentMetadataStore(dbSettings));
         }
-        else if (metadataStorageType == null)
-        {
-            throw new ArgumentException($"Configurtion field ${configKey} must be defined. Supported values are {InMemory}, {SQL}");
-        }
         else
         {
-            throw new Exception($"{metadataStorageType} is not a vaild vaule for Configurtion field {configKey}. Supported values are {InMemory}, {SQL}.");
+            throw new ConfigurationException(configKey, metadataStorageType, MetadataStorageValidTypes);
         }    
         return services;
     }

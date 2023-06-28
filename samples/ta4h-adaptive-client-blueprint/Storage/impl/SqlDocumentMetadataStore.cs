@@ -1,11 +1,18 @@
-﻿using System.Data;
+﻿using Azure.Core;
+using Azure.Identity;
+using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
+using System.Data;
 using System.Data.SqlClient;
+using System.Net;
+using System.Runtime;
 using System.Text;
 
 public class SqlDocumentMetadataStore : IDocumentMetadataStore
 {
-    private readonly string connectionString;
-    
+    private readonly string _connectionString;
+    private readonly string _authenticationMethod;
+    private readonly TokenCredential _credential;
+
     private const string Id = nameof(DocumentMetadata.DocumentId);
     private const string InputPath = nameof(DocumentMetadata.InputPath);
     private const string Status = nameof(DocumentMetadata.Status);
@@ -14,20 +21,39 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     private const string InitializeDbEntryName = "ta4hclientappisinitialized";
 
+    private const string PasswordAuthenctions = "Password";
+    private const string AadAuthenctions = "AAD";
+    private static string[] ValidAuthenticationMethods = new[] { PasswordAuthenctions, AadAuthenctions }; 
+
     public SqlDocumentMetadataStore(SQLMetadataStorageSettings dbSettings)
     {
-        this.connectionString = dbSettings.ConnectionString;
+        _connectionString = dbSettings.ConnectionString;
+        _authenticationMethod = ValidAuthenticationMethods.Contains(dbSettings.AuthenticationMethod) ? dbSettings.AuthenticationMethod : throw new ConfigurationException("MetadataStorage:SQLSettings", dbSettings.AuthenticationMethod, ValidAuthenticationMethods);
+        _credential = new DefaultAzureCredential();
         TableName = dbSettings.TableName;
+
     }
 
     private string TableName { get; }
 
+
+    private async Task<SqlConnection> GetOpenSqlConnectionAsync()
+    {
+        var sqlConnection = new SqlConnection(_connectionString);
+        if (_authenticationMethod == AadAuthenctions)
+        {
+            var accessToken = await _credential.GetTokenAsync(
+                new TokenRequestContext(new[] { "https://database.windows.net/.default" }), default);
+            sqlConnection.AccessToken = accessToken.Token;
+
+        }
+        await sqlConnection.OpenAsync();
+        return sqlConnection;
+    }
+
     public async Task CreateIfNotExistAsync()
     {
-
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
+        using var connection = await GetOpenSqlConnectionAsync();
         var tableCheckCommandText = $@"
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{TableName}')
         CREATE TABLE {TableName} (
@@ -46,9 +72,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
     {
         var entries = new List<DocumentMetadata>();
 
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
+        using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
         WITH cte AS (
             SELECT TOP (@BatchSize) {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}
@@ -82,9 +106,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     public async Task UpdateEntryAsync(DocumentMetadata entry)
     {
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
+        using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
             UPDATE {TableName} 
             SET 
@@ -105,9 +127,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     public async Task<DocumentMetadata> GetDocumentMetadataAsync(string documentId)
     {
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
+        using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
             SELECT {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath} 
             FROM {TableName} 
@@ -144,8 +164,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         }
         parameters.Length--;  // remove last comma
 
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
+        using var connection = await GetOpenSqlConnectionAsync();
 
         using var command = new SqlCommand($@"
         UPDATE {TableName} 
@@ -190,18 +209,10 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         {
             table.Rows.Add(entry.DocumentId, entry.InputPath, (int)entry.Status, entry.LastModified, entry.ResultsPath);
         }
-
-        using var bulkCopy = new SqlBulkCopy(connectionString);
+        using var connection = await GetOpenSqlConnectionAsync();
+        using var bulkCopy = new SqlBulkCopy(connection);
         bulkCopy.DestinationTableName = TableName;
-
-        try
-        {
-            await bulkCopy.WriteToServerAsync(table);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
+        await bulkCopy.WriteToServerAsync(table);
     }
 
 

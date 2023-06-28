@@ -5,6 +5,8 @@
     /// </summary>
     public string ConnectionString { get; set; }
 
+    public string AuthenticationMethod { get; set; } = "Password";
+
     public string TableName { get; set; } = "DocumentMetadata";
 
 }
