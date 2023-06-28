@@ -65,9 +65,13 @@
         return Task.FromResult(isInitialized);
     }
 
-    public Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus)
+    public Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus, string jobId = null)
     {
         entries.ForEach(entry => { entry.Status = newStatus; });
+        if (!string.IsNullOrEmpty(jobId))
+        {
+            entries.ForEach(entry => { entry.JobId = jobId; });
+        }
         return Task.CompletedTask;
     }
 }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
-namespace TextAnalyticsHealthcareAdaptiveClient;
+namespace TextAnalyticsHealthcareAdaptiveClient.Core.Services;
 
 public class HealthcareAnalysisRunner
 {
@@ -13,7 +13,6 @@ public class HealthcareAnalysisRunner
     private readonly List<Tuple<QueueItem, TimeSpan>> _completedItems = new();
     private readonly ILogger _logger;
     private readonly IDataHandler _dataHandler;
-    private readonly IFileStorage _outputStorage;
     private readonly DataProcessingOptions _dataProcessingOptions;
     private readonly object _lock = new object();
     private bool _datasetCompleted = false;
@@ -21,12 +20,10 @@ public class HealthcareAnalysisRunner
     public HealthcareAnalysisRunner(ILogger<HealthcareAnalysisRunner> logger,
                                        IDataHandler dataHandler,
                                        TextAnalytics4HealthClient textAnalyticsClient,
-                                       FileStorageManager fileStorageManager,
                                        IOptions<DataProcessingOptions> dataProcessingOptions)
     {
         _textAnalyticsClient = textAnalyticsClient ?? throw new ArgumentNullException(nameof(textAnalyticsClient));
 
-        _outputStorage = fileStorageManager.OutputStorage;
         _logger = logger;
         _dataHandler = dataHandler;
         _dataProcessingOptions = dataProcessingOptions.Value;
@@ -56,7 +53,9 @@ public class HealthcareAnalysisRunner
             foreach (var payload in nextBatch)
             {
                 await WaitIfJobsQueueToBigAsync();
-                await SendPaylodToProcessing(payload);
+                var jobId = await SendPaylodToProcessing(payload);
+                await _dataHandler.UpdateProcessingJobAsync(payload, jobId);
+
             }
         }
         await queueProcessingTask;
@@ -94,12 +93,13 @@ public class HealthcareAnalysisRunner
         return;
     }
 
-    private async Task SendPaylodToProcessing(Ta4hInputPayload payload)
+    private async Task<string> SendPaylodToProcessing(Ta4hInputPayload payload)
     {
         var jobId = await _textAnalyticsClient.StartHealthcareAnalysisOperationAsync(payload);
         payload.DocumentsMetadata.ForEach(m => { m.JobId = jobId; });
         _jobsQueue.Enqueue(new QueueItem(payload, payload.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(payload.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
         _logger.LogDebug($"{DateTime.Now} :: Job {jobId} started : Sent {payload.Documents.Count} docs for processing: {string.Join('|', payload.Documents.Select(d => d.Id).ToArray())}");
+        return jobId;
 
     }
 

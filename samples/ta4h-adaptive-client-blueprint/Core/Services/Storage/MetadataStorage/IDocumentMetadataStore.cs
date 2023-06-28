@@ -26,5 +26,5 @@
 
 
     Task<bool> IsInitializedAsync();
-    Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus);
+    Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus, string jobId = null);
 }

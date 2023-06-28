@@ -62,7 +62,7 @@ public class DataHandler : IDataHandler
         try
         {
             _logger.LogDebug("Updating docs metadata from job id {jobId}: doc ids = {docids}", payload.DocumentsMetadata.First().JobId, string.Join(" | ", payload.DocumentsMetadata.Select(m => m.DocumentId)));
-            await _metadataStore.UpdateEntriesStatusAsync(payload.DocumentsMetadata, ProcessingStatus.Succeeded);
+            await _metadataStore.UpdateEntriesStatusAsync(payload.DocumentsMetadata, ProcessingStatus.Succeeded, null);
         }
         catch (Exception ex)
         {
@@ -157,5 +157,10 @@ public class DataHandler : IDataHandler
         }
         _logger.LogInformation($"Completed batching, {documents.Count()}, {result.Sum(r => r.Documents.Count)}");
         return result;
+    }
+
+    public Task UpdateProcessingJobAsync(Ta4hInputPayload payload, string jobId)
+    {
+        return _metadataStore.UpdateEntriesStatusAsync(payload.DocumentsMetadata, ProcessingStatus.Processing, jobId);
     }
 }

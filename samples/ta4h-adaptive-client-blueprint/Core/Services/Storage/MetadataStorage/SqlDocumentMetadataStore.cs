@@ -18,6 +18,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
     private const string Status = nameof(DocumentMetadata.Status);
     private const string LastModified = nameof(DocumentMetadata.LastModified);
     private const string ResultsPath = nameof(DocumentMetadata.ResultsPath);
+    private const string JobId = nameof(DocumentMetadata.JobId);
 
     private const string InitializeDbEntryName = "ta4hclientappisinitialized";
 
@@ -61,7 +62,8 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
                     {InputPath} nvarchar(max) NOT NULL,
                     {Status} int NOT NULL,
                     {LastModified} datetime2 NOT NULL,
-                    {ResultsPath} nvarchar(max) NOT NULL
+                    {ResultsPath} nvarchar(max) NOT NULL,
+                    {JobId} nvarchar(64) NULL
         )";
 
         using var tableCheckCommand = new SqlCommand(tableCheckCommandText, connection);
@@ -75,18 +77,18 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
         WITH cte AS (
-            SELECT TOP (@BatchSize) {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}
+            SELECT TOP (@BatchSize) {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}, {JobId}
             FROM {TableName}
             WHERE {Status} = @Status
             ORDER BY {LastModified}
         )
         UPDATE cte
         SET {Status} = @NewStatus
-        OUTPUT INSERTED.{Id}, INSERTED.{InputPath}, INSERTED.{Status}, INSERTED.{LastModified}, INSERTED.{ResultsPath}", connection);
+        OUTPUT INSERTED.{Id}, INSERTED.{InputPath}, INSERTED.{Status}, INSERTED.{LastModified}, INSERTED.{ResultsPath}, INSERTED.{JobId}", connection);
 
         command.Parameters.AddWithValue("@BatchSize", batchSize);
         command.Parameters.AddWithValue("@Status", (int)ProcessingStatus.NotStarted);
-        command.Parameters.AddWithValue("@NewStatus", (int)ProcessingStatus.Processing);
+        command.Parameters.AddWithValue("@NewStatus", (int)ProcessingStatus.Scheduled);
 
         using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -97,7 +99,8 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
                 InputPath = reader.GetString(1),
                 Status = (ProcessingStatus)reader.GetInt32(2),
                 LastModified = reader.GetDateTime(3),
-                ResultsPath = reader.GetString(4)
+                ResultsPath = reader.GetString(4),
+                JobId = reader.IsDBNull(5) ? null : reader.GetString(5)
             });
         }
 
@@ -113,7 +116,8 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
                 {InputPath} = @InputPath,
                 {Status} = @Status,
                 {LastModified} = @LastModified,
-                {ResultsPath} = @ResultsPath
+                {ResultsPath} = @ResultsPath,
+                {JobId} = @JobId
             WHERE {Id} = @Id", connection);
 
         command.Parameters.AddWithValue("@Id", entry.DocumentId);
@@ -121,6 +125,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         command.Parameters.AddWithValue("@Status", (int)entry.Status);
         command.Parameters.AddWithValue("@LastModified", entry.LastModified);
         command.Parameters.AddWithValue("@ResultsPath", entry.ResultsPath);
+        command.Parameters.AddWithValue("@JobId", entry.JobId);
 
         await command.ExecuteNonQueryAsync();
     }
@@ -129,7 +134,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
     {
         using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
-            SELECT {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath} 
+            SELECT {Id}, {InputPath}, {Status}, {LastModified}, {ResultsPath}, {JobId}
             FROM {TableName} 
             WHERE {Id} = @Id", connection);
 
@@ -144,7 +149,8 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
                 InputPath = reader.GetString(1),
                 Status = (ProcessingStatus)reader.GetInt32(2),
                 LastModified = reader.GetDateTime(3),
-                ResultsPath = reader.GetString(4)
+                ResultsPath = reader.GetString(4),
+                JobId = reader.IsDBNull(5) ? null : reader.GetString(5)
             };
         }
 
@@ -152,7 +158,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
     }
 
 
-    public async Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus)
+    public async Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus, string jobId = null)
     {
         var newLastModified = DateTime.UtcNow;
         var parameters = new StringBuilder();
@@ -165,19 +171,37 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         parameters.Length--;  // remove last comma
 
         using var connection = await GetOpenSqlConnectionAsync();
+        string commandString;
+        if (string.IsNullOrEmpty(jobId))
+        {
+            commandString = $@"
+            UPDATE {TableName} 
+            SET 
+                {Status} = @Status,
+                {LastModified} = @LastModified
+            WHERE {Id} IN ({parameters})";
+        }
+        else
+        {
+            entries.ForEach(e => e.JobId = jobId);
+            commandString = $@"
+            UPDATE {TableName} 
+            SET 
+                {Status} = @Status,
+                {JobId} = @JobId,
+                {LastModified} = @LastModified
+            WHERE {Id} IN ({parameters})";
+        }
 
-        using var command = new SqlCommand($@"
-        UPDATE {TableName} 
-        SET 
-            {Status} = @Status,
-            {LastModified} = @LastModified
-        WHERE {Id} IN ({parameters.ToString()})", connection);
-
-        
+        using var command = new SqlCommand(commandString, connection);       
 
         var idParams = entries.Select((e, i) => new SqlParameter($"@Id{i}", e.DocumentId)).ToArray();
         command.Parameters.AddRange(idParams);
         command.Parameters.AddWithValue("@Status", (int)newStatus);
+        if (!string.IsNullOrEmpty(jobId))
+        {
+            command.Parameters.AddWithValue("@JobId", jobId);
+        }
         command.Parameters.AddWithValue("@LastModified", newLastModified);
         await command.ExecuteNonQueryAsync();
     }
@@ -204,10 +228,11 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         table.Columns.Add(Status, typeof(int));
         table.Columns.Add(LastModified, typeof(DateTime));
         table.Columns.Add(ResultsPath, typeof(string));
+        table.Columns.Add(JobId, typeof(string));
 
         foreach (var entry in entries)
         {
-            table.Rows.Add(entry.DocumentId, entry.InputPath, (int)entry.Status, entry.LastModified, entry.ResultsPath);
+            table.Rows.Add(entry.DocumentId, entry.InputPath, (int)entry.Status, entry.LastModified, entry.ResultsPath, entry.JobId);
         }
         using var connection = await GetOpenSqlConnectionAsync();
         using var bulkCopy = new SqlBulkCopy(connection);
