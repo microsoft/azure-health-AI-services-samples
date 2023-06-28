@@ -52,10 +52,7 @@ public class HealthcareAnalysisRunner
             }
             foreach (var payload in nextBatch)
             {
-                await WaitIfJobsQueueToBigAsync();
-                var jobId = await SendPaylodToProcessing(payload);
-                await _dataHandler.UpdateProcessingJobAsync(payload, jobId);
-
+                await StartPaylodProcessing(payload);
             }
         }
         await queueProcessingTask;
@@ -80,10 +77,10 @@ public class HealthcareAnalysisRunner
                 await Task.Delay(waitTimeWhenQueueIsEmpty);
             }
         }
-        _logger.LogInformation("Completed processing all queue items");
+        _logger.LogInformation("Completed processing of all queue items");
     }
 
-    private async Task WaitIfJobsQueueToBigAsync()
+    private async Task WaitIfJobsQueueTooBigAsync()
     {
         while (_jobsQueue.Count >= MaxAllowedPendingJobsSize)
         {
@@ -93,14 +90,13 @@ public class HealthcareAnalysisRunner
         return;
     }
 
-    private async Task<string> SendPaylodToProcessing(Ta4hInputPayload payload)
+    private async Task StartPaylodProcessing(Ta4hInputPayload payload)
     {
+        await WaitIfJobsQueueTooBigAsync();
         var jobId = await _textAnalyticsClient.StartHealthcareAnalysisOperationAsync(payload);
-        payload.DocumentsMetadata.ForEach(m => { m.JobId = jobId; });
         _jobsQueue.Enqueue(new QueueItem(payload, payload.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(payload.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
-        _logger.LogDebug($"{DateTime.Now} :: Job {jobId} started : Sent {payload.Documents.Count} docs for processing: {string.Join('|', payload.Documents.Select(d => d.Id).ToArray())}");
-        return jobId;
-
+        _logger.LogDebug($"Job {jobId} started : Sent {payload.Documents.Count} docs for processing: {string.Join('|', payload.Documents.Select(d => d.Id).ToArray())}");
+        await _dataHandler.UpdateProcessingJobAsync(payload, jobId);
     }
 
 
@@ -109,10 +105,6 @@ public class HealthcareAnalysisRunner
         var jobId = item.Payload.DocumentsMetadata.First().JobId;
         if (DateTime.UtcNow < item.NextCheckDateTime)
         {
-            if (item.LastCheckedDateTime < DateTime.UtcNow - TimeSpan.FromSeconds(5))
-            {
-                _logger.LogDebug("JobId {jobId}: too early to check. will check status after {NextCheckDateTime}", jobId, item.NextCheckDateTime);
-            }
             _jobsQueue.Enqueue(item with { LastCheckedDateTime = DateTime.UtcNow });
         }
         else
@@ -135,8 +127,16 @@ public class HealthcareAnalysisRunner
             {
                 if (response.Status == JobStatus.Failed || response.Tasks.Items[0].Status == JobStatus.Failed)
                 {
-                    _logger.LogError("ERROR: task failed {jobId}", jobId);
-                    RequeueFailedDocuments(item);
+                    _logger.LogError("Job with Id {jobId} Failed", jobId);
+                    if (item.Payload.Documents.Count > 1)
+                    {
+                        await RetryDocumentsFromFailedJobAsync(item);
+                    }
+                    else
+                    {
+                        _logger.LogError("Document with id {docId} Failed", item.Payload.DocumentsMetadata.First().DocumentId);
+                        await _dataHandler.StoreFailedJobResultsAsync(item.Payload);
+                    }
                 }
                 else
                 {
@@ -147,25 +147,23 @@ public class HealthcareAnalysisRunner
         }
     }
 
-    private void RequeueFailedDocuments(QueueItem item)
+    private async  Task RetryDocumentsFromFailedJobAsync(QueueItem item)
     {
         var ndocs = item.Payload.Documents.Count;
-        if (item.Payload.Documents.Count > 1)
+        _logger.LogInformation("Requeueing documents from failed job");
+        // if the failure of the job is due to one "bad" document that causes some unexpected error, retry the documents in the job separately so that we get the most successful documents.
+        var firstHalf = new Ta4hInputPayload
         {
-
-            var firstHalf = new Ta4hInputPayload
-            {
-                Documents = item.Payload.Documents.Take(ndocs / 2).ToList(),
-                DocumentsMetadata = item.Payload.DocumentsMetadata.Take(ndocs / 2).ToList()
-            };
-            var secondHalf = new Ta4hInputPayload
-            {
-                Documents = item.Payload.Documents.Skip(ndocs / 2).ToList(),
-                DocumentsMetadata = item.Payload.DocumentsMetadata.Skip(ndocs / 2).ToList()
-            };
-            _jobsQueue.Enqueue(new QueueItem(firstHalf, firstHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(firstHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
-            _jobsQueue.Enqueue(new QueueItem(secondHalf, secondHalf.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(secondHalf.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
-        }
+            Documents = item.Payload.Documents.Take(ndocs / 2).ToList(),
+            DocumentsMetadata = item.Payload.DocumentsMetadata.Take(ndocs / 2).ToList()
+        };
+        var secondHalf = new Ta4hInputPayload
+        {
+            Documents = item.Payload.Documents.Skip(ndocs / 2).ToList(),
+            DocumentsMetadata = item.Payload.DocumentsMetadata.Skip(ndocs / 2).ToList()
+        };
+        await StartPaylodProcessing(firstHalf);
+        await StartPaylodProcessing(secondHalf);
     }
 
     private async Task ProcessSuccessfulJobAsync(QueueItem item, TextAnlyticsJobResponse response)

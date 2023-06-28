@@ -70,6 +70,22 @@ public class DataHandler : IDataHandler
         }
     }
 
+    public async Task StoreFailedJobResultsAsync(Ta4hInputPayload payload)
+    {            
+        foreach (var docMetadata in payload.DocumentsMetadata)
+        {
+            try
+            {
+                docMetadata.Status = ProcessingStatus.Failed;
+                await _metadataStore.UpdateEntryAsync(docMetadata);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update results of failed document {docId}: {ex}", docMetadata.DocumentId, ex.ToString());
+            }
+        }
+    }
+
 
     private async Task EnsureInitializedAsync()
     {
