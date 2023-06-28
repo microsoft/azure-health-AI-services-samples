@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using TextAnalyticsHealthcareAdaptiveClient;
+using TextAnalyticsHealthcareAdaptiveClient.Core.Services;
 
 class Program
 {
@@ -14,7 +14,7 @@ class Program
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
         using IHost host = CreateHostBuilder(args).Build();
-        var processor = host.Services.GetRequiredService<HealthcareAnalysisProcessor>();
+        var processor = host.Services.GetRequiredService<HealthcareAnalysisRunner>();
         Logger = host.Services.GetRequiredService<ILogger<Program>>();
 
         try
@@ -62,7 +62,7 @@ class Program
             .AddMetadataStorage(configuraiton)
             .AddSingleton<IDataHandler, DataHandler>()
             .AddSingleton<TextAnalytics4HealthClient>()
-            .AddSingleton<HealthcareAnalysisProcessor>();
+            .AddSingleton<HealthcareAnalysisRunner>();
              //.AddHttpClientWithPolicies();
 
         }).ConfigureLogging((hostContext, logging) =>

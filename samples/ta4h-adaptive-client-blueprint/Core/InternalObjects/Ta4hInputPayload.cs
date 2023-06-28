@@ -1,6 +1,5 @@
 ﻿using Azure.AI.TextAnalytics;
 
-namespace TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 public class Ta4hInputPayload
 {
 

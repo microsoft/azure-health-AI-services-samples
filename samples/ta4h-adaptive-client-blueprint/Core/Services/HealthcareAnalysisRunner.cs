@@ -5,7 +5,7 @@ using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
 namespace TextAnalyticsHealthcareAdaptiveClient;
 
-public class HealthcareAnalysisProcessor
+public class HealthcareAnalysisRunner
 {
     private readonly TextAnalytics4HealthClient _textAnalyticsClient;
     private readonly ConcurrentQueue<QueueItem> _jobsQueue = new();
@@ -18,7 +18,7 @@ public class HealthcareAnalysisProcessor
     private readonly object _lock = new object();
     private bool _datasetCompleted = false;
 
-    public HealthcareAnalysisProcessor(ILogger<HealthcareAnalysisProcessor> logger,
+    public HealthcareAnalysisRunner(ILogger<HealthcareAnalysisRunner> logger,
                                        IDataHandler dataHandler,
                                        TextAnalytics4HealthClient textAnalyticsClient,
                                        FileStorageManager fileStorageManager,
@@ -39,7 +39,7 @@ public class HealthcareAnalysisProcessor
 
     public async Task StartAsync()
     {
-        
+
         _logger.LogInformation($"{nameof(StartAsync)} called");
 
         var queueProcessingTask = StartJobsQueueProcessingAsync();
@@ -47,7 +47,7 @@ public class HealthcareAnalysisProcessor
         while (true)
         {
             var nextBatch = await _dataHandler.LoadNextBatchOfPayloadsAsync();
-            if (!nextBatch.Any()) 
+            if (!nextBatch.Any())
             {
                 _logger.LogInformation("No more payloads to send for processing, waiting for the jobs queue to complete");
                 _datasetCompleted = true;
@@ -56,10 +56,32 @@ public class HealthcareAnalysisProcessor
             foreach (var payload in nextBatch)
             {
                 await WaitIfJobsQueueToBigAsync();
-                await SendPaylodToProcessing(payload); 
-            }            
+                await SendPaylodToProcessing(payload);
+            }
         }
         await queueProcessingTask;
+    }
+
+    private async Task StartJobsQueueProcessingAsync()
+    {
+        while (true)
+        {
+            if (_jobsQueue.TryDequeue(out var item))
+            {
+
+                await ProcessQueueItemAsync(item);
+            }
+            else
+            {
+                if (_datasetCompleted)
+                {
+                    break;
+                }
+                _logger.LogDebug("No jobs is queue, will try again in {ms} ms.", waitTimeWhenQueueIsEmpty.TotalMilliseconds);
+                await Task.Delay(waitTimeWhenQueueIsEmpty);
+            }
+        }
+        _logger.LogInformation("Completed processing all queue items");
     }
 
     private async Task WaitIfJobsQueueToBigAsync()
@@ -82,38 +104,16 @@ public class HealthcareAnalysisProcessor
     }
 
 
-    public async Task StartJobsQueueProcessingAsync()
-    {
-        while (true)
-        {
-            if (_jobsQueue.TryDequeue(out var item))
-            {
-                
-                await ProcessQueueItemAsync(item);
-            }
-            else
-            {
-                if (_datasetCompleted)
-                {
-                    break;
-                }
-                _logger.LogDebug("No jobs is queue, will try again in {ms} ms.", waitTimeWhenQueueIsEmpty.TotalMilliseconds);
-                await Task.Delay(waitTimeWhenQueueIsEmpty);
-            }
-        }
-        _logger.LogInformation("Completed processing all queue items");
-    }
-
     private async Task ProcessQueueItemAsync(QueueItem item)
     {
         var jobId = item.Payload.DocumentsMetadata.First().JobId;
         if (DateTime.UtcNow < item.NextCheckDateTime)
         {
-            if (item.LastCheckedDateTime < DateTime.UtcNow - TimeSpan.FromSeconds(5)) 
+            if (item.LastCheckedDateTime < DateTime.UtcNow - TimeSpan.FromSeconds(5))
             {
                 _logger.LogDebug("JobId {jobId}: too early to check. will check status after {NextCheckDateTime}", jobId, item.NextCheckDateTime);
             }
-            _jobsQueue.Enqueue(item with { LastCheckedDateTime = DateTime.UtcNow});
+            _jobsQueue.Enqueue(item with { LastCheckedDateTime = DateTime.UtcNow });
         }
         else
         {
@@ -129,7 +129,7 @@ public class HealthcareAnalysisProcessor
                 {
                     var newItem = item with { LastCheckedDateTime = DateTime.UtcNow, NextCheckDateTime = DateTime.UtcNow + GetEstimatedProcessingTime(item.InputSize) + TimeSpan.FromSeconds(15) };
                     _jobsQueue.Enqueue(newItem);
-                }             
+                }
             }
             else
             {
