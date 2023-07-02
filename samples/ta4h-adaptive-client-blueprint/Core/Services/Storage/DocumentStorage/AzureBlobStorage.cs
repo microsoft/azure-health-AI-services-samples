@@ -1,5 +1,7 @@
 ﻿using Azure;
+using Azure.Identity;
 using Azure.Storage.Blobs;
+using System.Runtime;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,9 +12,25 @@ public class AzureBlobStorage : IFileStorage
     private readonly BlobContainerClient _containerClient;
     private readonly JsonSerializerOptions _jsonSerializationOptions;
 
-    public AzureBlobStorage(string connectionString, string containerName)
+    private const string ConstringAuthentication = "ConnectionString";
+    private const string AadAuthentication = "AAD";
+    private static string[] ValidAuthenticationMethods = new[] { ConstringAuthentication, AadAuthentication };
+
+    public AzureBlobStorage(string connectionString, string authenticationMethod, string containerName)
     {
-        _blobServiceClient = new BlobServiceClient(connectionString);
+        if (authenticationMethod == ConstringAuthentication)
+        {
+            _blobServiceClient = new BlobServiceClient(connectionString);
+        }
+        else if (authenticationMethod == AadAuthentication)
+        {
+            var credential = new DefaultAzureCredential();
+            _blobServiceClient = new BlobServiceClient(new Uri(connectionString), credential);
+        }
+        else
+        {
+            throw new ConfigurationException("InputStorage:AzureBlobSettings:AuthenticationMethod", authenticationMethod, ValidAuthenticationMethods);
+        }
         _containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         _jsonSerializationOptions = new JsonSerializerOptions
         {

@@ -9,5 +9,10 @@
     /// The name of blob container where the documents are stored
     /// </summary>
     public string ContainerName { get; set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public string AuthenticationMethod { get; set; } = "ConnectionString";
 }
 

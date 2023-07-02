@@ -14,12 +14,12 @@
         }
         else
         {
-            message = $"Invalid value {invalidValue} provided for configuration field {propertyName}.";
+            message = $"Invalid value '{invalidValue}' provided for configuration field '{propertyName}'.";
         }
         if (validValues != null && validValues.Any())
         {
             var validValuesString = string.Join(", ", validValues);
-            message += $" Supported values are {validValuesString}.";
+            message += $" Supported values are '{validValuesString}'.";
         }
         return message;
     }

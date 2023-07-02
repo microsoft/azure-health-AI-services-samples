@@ -36,7 +36,7 @@ public static class SeviceCollectionExtensions
                 var settingsSection = $"{configSection}:AzureBlobSettings";
                 var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
                 var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>();
-                return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.ContainerName);
+                return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.AuthenticationMethod, azureBlobStorageSettings.ContainerName);
             }
             else if (storageType == Noop)
             {

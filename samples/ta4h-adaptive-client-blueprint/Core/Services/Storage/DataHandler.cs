@@ -156,7 +156,7 @@ public class DataHandler : IDataHandler
                 nextPayload = new();
                 nextPayload.Documents.Add(doc);
                 nextPayload.DocumentsMetadata.Add(metadata);
-                if (_options.RandomizeRequestSize)
+                if (_options.RandomizeRequestSize && _options.MaxDocsPerRequest > 2)
                 {
                     maxDocsPerRequest = random.Next(2, _options.MaxDocsPerRequest + 1);
                 }
