@@ -1,9 +1,9 @@
 ﻿public class NoopStorage : IFileStorage
 {
 
-    public Task<IEnumerable<string>> EnumerateFilesRecursiveAsync(string path = null)
+    public IAsyncEnumerable<string> EnumerateFilesRecursiveAsync(string path = null)
     {
-        return Task.FromResult(Enumerable.Empty<string>());
+        return Enumerable.Empty<string>().ToAsyncEnumerable();
     }
 
 

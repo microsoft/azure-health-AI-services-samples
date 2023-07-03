@@ -30,13 +30,34 @@ public class DataHandler : IDataHandler
         await EnsureInitializedAsync();
         var docsMetadata = await _metadataStore.GetNextDocumentsForProcessAsync(_dataProcessingOptions.MaxBatchSize);
         _logger.LogInformation("start next batch - {count} docs for processing", docsMetadata.Count());
-        var docs = await BatchProcessor.ProcessInBatchesAsync(
-            docsMetadata, 10, ReadDocumentFromStorage);
-        var zipped = docsMetadata.Zip(docs, (metadata, doc) =>  (metadata, doc ));
+        var docs = new List<TextDocumentInput>();
+        try
+        {
+            docs.AddRange(await BatchProcessor.ProcessInBatchesAsync(
+                docsMetadata, 10, ReadDocumentFromStorage));
+        }
+        catch (AggregateException aex)
+        {
+            foreach (var docMetadata in docsMetadata)
+            {
+                try
+                {
+                    docs.Add(await ReadDocumentFromStorage(docMetadata));
+
+                }
+                catch (FileNotFoundException)
+                {
+                    _logger.LogError("file for documentId {documentId} was not found. will not be processed", docMetadata.DocumentId);
+                    docMetadata.Status = ProcessingStatus.NotFound;
+                    await _metadataStore.UpdateEntryAsync(docMetadata);
+                }
+            }
+        }
+        IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> zipped = docsMetadata.Zip(docs, (metadata, doc) => (metadata, doc));
         _logger.LogInformation("{count} docs were read from storage", docs.Count());
 
-        var payloads = ToTa4hInputPayloads(zipped);
-        _logger.LogInformation("{count} payload were created", payloads.Count);
+        List<Ta4hInputPayload> payloads = ToTa4hInputPayloads(zipped);
+        _logger.LogInformation("{count} payloads were created", payloads.Count);
         return payloads;
     }
 
@@ -97,26 +118,26 @@ public class DataHandler : IDataHandler
         var isInitialized = await _metadataStore.IsInitializedAsync();
         if (!isInitialized)
         {
-            var fileNames = await _inputFileStorage.EnumerateFilesRecursiveAsync();
-            fileNames = fileNames.Where(fn => fn.EndsWith(".txt"));
-            _logger.LogInformation("found {nfiles} files", fileNames.Count());
             var batch = new List<DocumentMetadata>();
-            foreach (var filename in fileNames)
+            await foreach (var filename in _inputFileStorage.EnumerateFilesRecursiveAsync())
             {
-                var entry = new DocumentMetadata
+                if (filename.EndsWith(".txt"))
                 {
-                    DocumentId = string.Join("/", filename.Split(Path.DirectorySeparatorChar)).Replace(".txt", ""),
-                    InputPath = filename,
-                    LastModified = DateTime.UtcNow,
-                    Status = ProcessingStatus.NotStarted,
-                    ResultsPath = filename.Replace(".txt", ".result.json")
-                };
-                batch.Add(entry);
-                if (batch.Count > 100)
-                {
-                    _logger.LogInformation("writing batch of documents metadata");
-                    await _metadataStore.AddEntriesAsync(batch);
-                    batch.Clear();
+                    var entry = new DocumentMetadata
+                    {
+                        DocumentId = string.Join("/", filename.Split(Path.DirectorySeparatorChar)).Replace(".txt", ""),
+                        InputPath = filename,
+                        LastModified = DateTime.UtcNow,
+                        Status = ProcessingStatus.NotStarted,
+                        ResultsPath = filename.Replace(".txt", ".result.json")
+                    };
+                    batch.Add(entry);
+                    if (batch.Count > 100)
+                    {
+                        _logger.LogInformation("writing batch of documents metadata");
+                        await _metadataStore.AddEntriesAsync(batch);
+                        batch.Clear();
+                    }
                 }
             }
             if (batch.Any())

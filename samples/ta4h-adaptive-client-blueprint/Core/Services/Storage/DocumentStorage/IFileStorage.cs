@@ -11,7 +11,7 @@ public interface IFileStorage
     /// </summary>
     /// <param name="path">The path to start enumerating files from.</param>
     /// <returns>A list of file paths.</returns>
-    Task<IEnumerable<string>> EnumerateFilesRecursiveAsync(string path = null);
+    IAsyncEnumerable<string> EnumerateFilesRecursiveAsync(string path = null);
 
     /// <summary>
     /// Reads a text file from a given file path.

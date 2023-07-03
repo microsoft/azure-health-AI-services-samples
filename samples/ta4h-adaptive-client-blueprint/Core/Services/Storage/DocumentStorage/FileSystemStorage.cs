@@ -15,12 +15,12 @@ public class FileSystemStorage : IFileStorage
         };
     }
 
-    public Task<IEnumerable<string>> EnumerateFilesRecursiveAsync(string path = null)
+    public IAsyncEnumerable<string> EnumerateFilesRecursiveAsync(string path = null)
     {
         var rootPathLength = Path.GetFullPath(_rootPath + Path.DirectorySeparatorChar).Length;
         path = path is null ? _rootPath : Path.Combine(_rootPath, path);
         var filenames = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Select(x => x.Substring(rootPathLength));
-        return Task.FromResult(filenames);
+        return filenames.ToAsyncEnumerable();
     }
 
     public async Task<string> ReadTextFileAsync(string filePath)

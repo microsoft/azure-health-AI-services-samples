@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.Identity;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using System.Runtime;
 using System.Text;
 using System.Text.Json;
@@ -39,38 +40,39 @@ public class AzureBlobStorage : IFileStorage
     }
 
 
-    public async Task<IEnumerable<string>> EnumerateFilesRecursiveAsync(string prefix = "")
+
+    public async IAsyncEnumerable<string> EnumerateFilesRecursiveAsync(string prefix = "")
     {
-        var blobs = new List<string>();
+        IAsyncEnumerable<BlobItem> blobItems;
 
         try
         {
-            await foreach (var blobItem in _containerClient.GetBlobsAsync(prefix: prefix))
-            {
-                blobs.Add(blobItem.Name);
-            }
+            blobItems = _containerClient.GetBlobsAsync(prefix: prefix);
         }
         catch (RequestFailedException ex)
         {
             Console.WriteLine($"An error occurred: {ex.Message}");
+            yield break; // ends the method execution if an exception is caught
         }
 
-        return blobs;
+        await foreach (var blobItem in blobItems)
+        {
+            yield return blobItem.Name;
+        }
     }
 
     public async Task<string> ReadTextFileAsync(string blobName)
     {
-        var blobClient = _containerClient.GetBlobClient(blobName);
+        var blobClient = _containerClient.GetBlobClient(blobName + ".udi");
 
         try
         {
             var response = await blobClient.DownloadContentAsync();
             return response.Value.Content.ToString();
         }
-        catch (RequestFailedException ex)
+        catch (RequestFailedException ex) when (ex.ErrorCode == "BlobNotFound")
         {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-            return null;
+            throw new FileNotFoundException("File not found", blobName, ex);
         }
     }
 
