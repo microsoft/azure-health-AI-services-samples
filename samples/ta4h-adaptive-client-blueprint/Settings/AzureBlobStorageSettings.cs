@@ -11,7 +11,7 @@
     public string ContainerName { get; set; }
 
     /// <summary>
-    /// 
+    /// AuthenticationMethod
     /// </summary>
     public string AuthenticationMethod { get; set; } = "ConnectionString";
 }
