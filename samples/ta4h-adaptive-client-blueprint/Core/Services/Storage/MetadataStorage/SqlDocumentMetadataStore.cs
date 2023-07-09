@@ -1,10 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 using System.Data;
 using System.Data.SqlClient;
-using System.Net;
-using System.Runtime;
 using System.Text;
 
 public class SqlDocumentMetadataStore : IDocumentMetadataStore
