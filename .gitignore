@@ -6,3 +6,4 @@
 /samples/ta4h-container-e2e-sample/StressTestConsoleClient/bin
 /samples/ta4h-container-e2e-sample/StressTestConsoleClient/obj
 /samples/ta4h-adaptive-client-blueprint/env
+/samples/ta4h-adaptive-client-blueprint/.vscode
