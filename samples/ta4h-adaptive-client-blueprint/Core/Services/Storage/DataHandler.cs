@@ -132,7 +132,7 @@ public class DataHandler : IDataHandler
                         ResultsPath = filename.Replace(".txt", ".result.json")
                     };
                     batch.Add(entry);
-                    if (batch.Count > 100)
+                    if (batch.Count >= 100)
                     {
                         _logger.LogInformation("writing batch of documents metadata");
                         await _metadataStore.AddEntriesAsync(batch);

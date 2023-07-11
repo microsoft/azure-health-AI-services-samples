@@ -12,5 +12,4 @@
 
     public string JobId { get; set; }
 
-    // ... any other metadata fields you need
 }

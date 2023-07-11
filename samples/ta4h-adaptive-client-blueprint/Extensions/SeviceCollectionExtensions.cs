@@ -16,6 +16,7 @@ public static class SeviceCollectionExtensions
     static string[] FileStorageValidTypes = new[] { FileSystem, AzureBlob, Noop };
     const string InMemory = "InMemory";
     const string SQL = "SQL";
+    const string AzureTable = "AzureTable";
     static string[] MetadataStorageValidTypes = new[] { InMemory, SQL};
 
     public static IServiceCollection AddFileStorage(this IServiceCollection services, IConfiguration configuration)
@@ -73,7 +74,17 @@ public static class SeviceCollectionExtensions
             var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
             var dbSettings = section.Get<SQLMetadataStorageSettings>();
             services.AddSingleton<IDocumentMetadataStore>(new SqlDocumentMetadataStore(dbSettings));
+
         }
+        else if (metadataStorageType == AzureTable)
+        {
+            var settingsSection = "MetadataStorage:AzureTableSettings";
+            var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
+            var settings = section.Get<AzureTableMetadataStorageSettings>();
+            services.AddSingleton<IDocumentMetadataStore>(new AzureTableDocumentMetadataStore(settings));
+        }
+          
+
         else
         {
             throw new ConfigurationException(configKey, metadataStorageType, MetadataStorageValidTypes);

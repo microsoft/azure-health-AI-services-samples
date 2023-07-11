@@ -2,7 +2,6 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using System.Runtime;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -63,7 +62,7 @@ public class AzureBlobStorage : IFileStorage
 
     public async Task<string> ReadTextFileAsync(string blobName)
     {
-        var blobClient = _containerClient.GetBlobClient(blobName + ".udi");
+        var blobClient = _containerClient.GetBlobClient(blobName);
 
         try
         {

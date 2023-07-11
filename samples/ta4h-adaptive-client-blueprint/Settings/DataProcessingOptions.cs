@@ -18,7 +18,7 @@
     /// <summary>
     /// The maximun number of documents to be loaded into memory from processing.
     /// </summary>
-    public int MaxBatchSize { get; set; } = 5000;
+    public int MaxBatchSize { get; set; } = 1000;
 
     /// <summary>
     /// For dev purposes only - the application will cycle to the documents this number of times.
