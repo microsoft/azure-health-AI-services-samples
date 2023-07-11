@@ -125,36 +125,47 @@ public class DataHandler : IDataHandler
         if (!isInitialized)
         {
             var batch = new List<DocumentMetadata>();
-            await foreach (var filename in _inputFileStorage.EnumerateFilesRecursiveAsync())
+            for (int i = 0; i < _dataProcessingOptions.RepeatTimes; i++)
             {
-                if (docsCounter > _dataProcessingOptions.MaxDocs)
+                await foreach (var filename in _inputFileStorage.EnumerateFilesRecursiveAsync())
                 {
-                    break;
-                }
-
-                if (filename.EndsWith(".txt"))
-                {
-                    var entry = new DocumentMetadata
+                    if (docsCounter > _dataProcessingOptions.MaxDocs)
                     {
-                        DocumentId = string.Join("/", filename.Split(Path.DirectorySeparatorChar)).Replace(".txt", ""),
-                        InputPath = filename,
-                        LastModified = DateTime.UtcNow,
-                        Status = ProcessingStatus.NotStarted,
-                        ResultsPath = filename.Replace(".txt", ".result.json")
-                    };
-                    batch.Add(entry);
-                    if (batch.Count >= 100)
-                    {
-                        _logger.LogInformation("writing batch of documents metadata");
-                        await _metadataStore.AddEntriesAsync(batch);
-                        batch.Clear();
+                        break;
                     }
-                    docsCounter++;
+
+                    if (filename.EndsWith(".txt"))
+                    {
+                        var docId = string.Join("/", filename.Split(Path.DirectorySeparatorChar)).Replace(".txt", "");
+
+                        var entry = new DocumentMetadata
+                        {
+                            DocumentId = docId,
+                            InputPath = filename,
+                            LastModified = DateTime.UtcNow,
+                            Status = ProcessingStatus.NotStarted,
+                            ResultsPath = filename.Replace(".txt", ".result.json")
+                        };
+                        if (i > 0)
+                        {
+                            entry.DocumentId = $"repeat_{i}/" + docId;
+                            entry.ResultsPath = entry.ResultsPath.Replace(".result.json", $".result.repeat_{i}.json");
+                        }
+                        batch.Add(entry);
+                        if (batch.Count >= 100)
+                        {
+                            _logger.LogInformation("writing batch of documents metadata");
+                            await _metadataStore.AddEntriesAsync(batch);
+                            batch.Clear();
+                        }
+                        docsCounter++;
+                    }
                 }
-            }
-            if (batch.Any())
-            {
-                await _metadataStore.AddEntriesAsync(batch);
+                if (batch.Any())
+                {
+                    await _metadataStore.AddEntriesAsync(batch);
+                    batch.Clear();
+                }
             }
             await _metadataStore.MarkAsInitializedAsync();
         }

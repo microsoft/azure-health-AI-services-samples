@@ -40,7 +40,6 @@ public class HealthcareAnalysisRunner
         _logger.LogInformation($"{nameof(StartAsync)} called");
 
         var queueProcessingTask = StartJobsQueueProcessingAsync();
-        var docsProcessed = _dataProcessingOptions.MaxDocs;
         while (true)
         {
             var nextBatch = await _dataHandler.LoadNextBatchOfPayloadsAsync();
