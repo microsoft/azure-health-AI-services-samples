@@ -116,11 +116,17 @@ public class DataHandler : IDataHandler
         }
         await _metadataStore.CreateIfNotExistAsync();
         var isInitialized = await _metadataStore.IsInitializedAsync();
+        var maxDataSize = 587;
         if (!isInitialized)
         {
             var batch = new List<DocumentMetadata>();
             await foreach (var filename in _inputFileStorage.EnumerateFilesRecursiveAsync())
             {
+                if (maxDataSize < 1)
+                {
+                    break;
+                }
+
                 if (filename.EndsWith(".txt"))
                 {
                     var entry = new DocumentMetadata
@@ -138,6 +144,7 @@ public class DataHandler : IDataHandler
                         await _metadataStore.AddEntriesAsync(batch);
                         batch.Clear();
                     }
+                    maxDataSize--;
                 }
             }
             if (batch.Any())
