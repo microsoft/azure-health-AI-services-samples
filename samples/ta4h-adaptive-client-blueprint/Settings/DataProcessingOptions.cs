@@ -13,7 +13,7 @@
     /// <summary>
     /// The maximun number of documents to be processed by the application in one run.
     /// </summary>
-    public int MaxDocs { get; set; }
+    public int MaxDocs { get; set; } = int.MaxValue;
 
     /// <summary>
     /// The maximun number of documents to be loaded into memory from processing.

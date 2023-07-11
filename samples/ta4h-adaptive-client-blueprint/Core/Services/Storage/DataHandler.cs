@@ -14,6 +14,7 @@ public class DataHandler : IDataHandler
     private readonly ILogger _logger;
     private readonly IDocumentMetadataStore _metadataStore;
     private bool initializationComplete = false;
+    private int docsLoaded = 0;
 
     public DataHandler(ILogger<DataHandler> logger, FileStorageManager fileStorageManager, IDocumentMetadataStore metadataStore, IOptions<Ta4hOptions> options, IOptions<DataProcessingOptions> dataProcessingOptions)
     {
@@ -28,6 +29,10 @@ public class DataHandler : IDataHandler
     public async Task<List<Ta4hInputPayload>> LoadNextBatchOfPayloadsAsync()
     {
         await EnsureInitializedAsync();
+        if (docsLoaded > _dataProcessingOptions.MaxDocs)
+        {
+            return new List<Ta4hInputPayload>();
+        }
         var docsMetadata = await _metadataStore.GetNextDocumentsForProcessAsync(_dataProcessingOptions.MaxBatchSize);
         _logger.LogInformation("start next batch - {count} docs for processing", docsMetadata.Count());
         var docs = new List<TextDocumentInput>();
@@ -55,7 +60,7 @@ public class DataHandler : IDataHandler
         }
         IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> zipped = docsMetadata.Zip(docs, (metadata, doc) => (metadata, doc));
         _logger.LogInformation("{count} docs were read from storage", docs.Count());
-
+        docsLoaded += docs.Count;
         List<Ta4hInputPayload> payloads = ToTa4hInputPayloads(zipped);
         _logger.LogInformation("{count} payloads were created", payloads.Count);
         return payloads;
@@ -116,13 +121,13 @@ public class DataHandler : IDataHandler
         }
         await _metadataStore.CreateIfNotExistAsync();
         var isInitialized = await _metadataStore.IsInitializedAsync();
-        var maxDataSize = 587;
+        int docsCounter = 0;
         if (!isInitialized)
         {
             var batch = new List<DocumentMetadata>();
             await foreach (var filename in _inputFileStorage.EnumerateFilesRecursiveAsync())
             {
-                if (maxDataSize < 1)
+                if (docsCounter > _dataProcessingOptions.MaxDocs)
                 {
                     break;
                 }
@@ -144,7 +149,7 @@ public class DataHandler : IDataHandler
                         await _metadataStore.AddEntriesAsync(batch);
                         batch.Clear();
                     }
-                    maxDataSize--;
+                    docsCounter++;
                 }
             }
             if (batch.Any())
