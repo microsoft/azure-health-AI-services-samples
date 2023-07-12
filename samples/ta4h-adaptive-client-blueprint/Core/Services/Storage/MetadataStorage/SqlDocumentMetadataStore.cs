@@ -1,13 +1,18 @@
 ﻿using Azure.Core;
 using Azure.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Data;
 using System.Data.SqlClient;
+using System.Runtime;
 using System.Text;
 
 public class SqlDocumentMetadataStore : IDocumentMetadataStore
 {
     private readonly string _connectionString;
     private readonly string _authenticationMethod;
+    private readonly ILogger _logger;
+
     private readonly TokenCredential _credential;
 
     private const string DocumentId = nameof(DocumentMetadata.DocumentId);
@@ -23,12 +28,14 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
     private const string AadAuthetication = "AAD";
     private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication }; 
 
-    public SqlDocumentMetadataStore(SQLMetadataStorageSettings dbSettings)
+    public SqlDocumentMetadataStore(ILogger<SqlDocumentMetadataStore> logger, IOptions<SQLMetadataStorageSettings> options)
     {
+        var dbSettings = options.Value;
         _connectionString = dbSettings.ConnectionString;
         _authenticationMethod = ValidAuthenticationMethods.Contains(dbSettings.AuthenticationMethod) ? dbSettings.AuthenticationMethod : throw new ConfigurationException("MetadataStorage:SQLSettings", dbSettings.AuthenticationMethod, ValidAuthenticationMethods);
         _credential = new DefaultAzureCredential();
         TableName = dbSettings.TableName;
+        _logger = logger;
 
     }
 

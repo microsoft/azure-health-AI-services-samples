@@ -1,7 +1,9 @@
 ﻿using Azure;
 using Azure.Data.Tables;
 using Azure.Identity;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Diagnostics;
 
 public class LRUDictionary<TKey, TValue> : IDictionary<TKey, TValue>
 {
@@ -227,20 +229,23 @@ public static class DocumentMetadataExtensions
 public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 {
     private readonly TableClient _tableClient;
+    private readonly ILogger _logger;
     private const string PasswordAuthentication = "ConnectionString";
     private const string AadAuthetication = "AAD";
     private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication };
     private const string DefaultPartitionKey = "metadata";
     
 
-    public AzureTableDocumentMetadataStore(AzureTableMetadataStorageSettings settings)
+    public AzureTableDocumentMetadataStore(IOptions<AzureTableMetadataStorageSettings> options, ILogger<AzureTableDocumentMetadataStore> logger)
     {
+        var settings = options.Value;
         var connectionString = settings.ConnectionString;
         var authenticationMethod = ValidAuthenticationMethods.Contains(settings.AuthenticationMethod) ? settings.AuthenticationMethod : throw new ConfigurationException("MetadataStorage:AzureTableSettings", settings.AuthenticationMethod, ValidAuthenticationMethods);
         var credential = new DefaultAzureCredential();
         var tableName = settings.TableName;
         TableServiceClient serviceClient = new TableServiceClient(new Uri(connectionString), credential);
         _tableClient = serviceClient.GetTableClient(tableName);
+        _logger = logger;
     }
     public async Task CreateIfNotExistAsync()
     {
@@ -249,6 +254,8 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 
     public async Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int batchSize)
     {
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
         var notStartedStatus = Enum.GetName(typeof(ProcessingStatus), ProcessingStatus.NotStarted);
         var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.Status == notStartedStatus, maxPerPage: 500);
         var entries = new List<DocumentMetadata>();
@@ -265,7 +272,10 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
                 break;
             }
         }
+        stopwatch.Stop();
+        _logger.LogInformation("Scheduled {count} documents for processing", entries.Count);
         return entries;
+
     }
 
     private async Task BatchUpdateTableEntities(List<DocumentMetadataTableEntity> batchEntitiesToUpdate)

@@ -29,22 +29,14 @@ public static class SeviceCollectionExtensions
             {
                 var settingsSection = $"{configSection}:FileSystemSettings";
                 var section = configuration.GetSection(settingsSection);
-                if (section.Value == null)
-                {
-                     throw new ConfigurationException(settingsSection, null);
-                }
-                var fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
+                var fileSystemStorageSettings = section.Get<FileSystemStorageSettings>() ?? throw new ConfigurationException(settingsSection, null);
                 return new FileSystemStorage(fileSystemStorageSettings.BasePath);
             }
             else if (storageType == AzureBlob)
             {
                 var settingsSection = $"{configSection}:AzureBlobSettings";
                 var section = configuration.GetSection(settingsSection);
-                if (section.Value == null)
-                {
-                    throw new ConfigurationException(settingsSection, null);
-                }
-                var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>();
+                var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>() ?? throw new ConfigurationException(settingsSection, null);
                 return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.AuthenticationMethod, azureBlobStorageSettings.ContainerName);
             }
             else if (storageType == Noop)

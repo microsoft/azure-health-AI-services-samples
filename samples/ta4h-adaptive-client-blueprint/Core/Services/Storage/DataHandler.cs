@@ -217,7 +217,7 @@ public class DataHandler : IDataHandler
         {
             payloads.Add(nextPayload);
         }
-        _logger.LogInformation("Prepared next batch of payloads for ta4h: {documentCount}, {payloadCount}", documents.Count(), payloads.Count);
+        _logger.LogInformation("Prepared next batch of {payloadCount} payloads for ta4h with {documentCount} documents.", payloads.Count, documents.Count());
         return payloads;
     }
 
