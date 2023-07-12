@@ -77,7 +77,10 @@ public class TextAnalytics4HealthClient
         {
             try
             {
-                _logger.LogDebug("attempt number {attempt}, {uri}", attemptsCounter + 1, request.RequestUri);
+                if (attemptsCounter > 0)
+                {
+                    _logger.LogWarning("attempt number {attempt}, {uri}", attemptsCounter + 1, request.RequestUri);
+                }
                 var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {

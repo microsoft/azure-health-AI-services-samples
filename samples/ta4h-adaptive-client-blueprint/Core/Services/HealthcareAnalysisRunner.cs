@@ -94,7 +94,7 @@ public class HealthcareAnalysisRunner
         await WaitIfJobsQueueTooBigAsync();
         var jobId = await _textAnalyticsClient.StartHealthcareAnalysisOperationAsync(payload);
         _jobsQueue.Enqueue(new QueueItem(payload, payload.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(payload.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
-        _logger.LogDebug($"Job {jobId} started : Sent {payload.Documents.Count} docs for processing: {string.Join('|', payload.Documents.Select(d => d.Id).ToArray())}");
+        _logger.LogDebug("Job {jobId} started : Sent {docCount} docs for processing: {docs}", jobId, payload.Documents.Count, string.Join('|', payload.Documents.Select(d => d.Id).ToArray()));
         await _dataHandler.UpdateProcessingJobAsync(payload, jobId);
     }
 
@@ -193,7 +193,7 @@ public class HealthcareAnalysisRunner
                     newMaxSize = 1;
                 }
                 MaxAllowedPendingJobsSize = newMaxSize;
-                _logger.LogInformation("estiamtedMeanWaitTime: {estiamtedMeanWaitTime}, currentMaxSize: {currentMaxSize}, nextMaxSize: {MaxSize}", estiamtedMeanWaitTime, currentMaxSize, MaxAllowedPendingJobsSize);
+                _logger.LogInformation("estimatedMeanWaitTime: {estiamtedMeanWaitTime}, currentMaxSize: {currentMaxSize}, nextMaxSize: {MaxSize}", estiamtedMeanWaitTime, currentMaxSize, MaxAllowedPendingJobsSize);
                 _completedItems.Clear();
             }
         }

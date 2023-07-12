@@ -83,11 +83,12 @@ public class DataHandler : IDataHandler
             foreach (var ex in ae.InnerExceptions)
             {
                 _logger.LogError("error in SaveJsonFileAsync: {ex}", ex.ToString());
+                // todo: retry? requeue?
             }
         }
         try
         {
-            _logger.LogDebug("Updating docs metadata from job id {jobId}: doc ids = {docids}", payload.DocumentsMetadata.First().JobId, string.Join(" | ", payload.DocumentsMetadata.Select(m => m.DocumentId)));
+            _logger.LogDebug("Updating docs metadata for job id {jobId}: doc ids = {docids}", payload.DocumentsMetadata.First().JobId, string.Join(" | ", payload.DocumentsMetadata.Select(m => m.DocumentId)));
             await _metadataStore.UpdateEntriesStatusAsync(payload.DocumentsMetadata, ProcessingStatus.Succeeded, null);
         }
         catch (Exception ex)
@@ -154,8 +155,8 @@ public class DataHandler : IDataHandler
                         batch.Add(entry);
                         if (batch.Count >= 100)
                         {
-                            _logger.LogInformation("writing batch of documents metadata");
                             await _metadataStore.AddEntriesAsync(batch);
+                            _logger.LogInformation("wrote {cnt} new entries to documents metadata store", batch.Count);
                             batch.Clear();
                         }
                         docsCounter++;
@@ -164,6 +165,7 @@ public class DataHandler : IDataHandler
                 if (batch.Any())
                 {
                     await _metadataStore.AddEntriesAsync(batch);
+                    _logger.LogInformation("wrote {cnt} new entries to documents metadata store", batch.Count);
                     batch.Clear();
                 }
             }
@@ -188,7 +190,7 @@ public class DataHandler : IDataHandler
         int maxCharactersPerRequest = _options.MaxCharactersPerRequest;
         int maxDocsPerRequest = _options.MaxDocsPerRequest;
         var random = new Random();
-        var result = new List<Ta4hInputPayload>();
+        var payloads = new List<Ta4hInputPayload>();
 
         Ta4hInputPayload nextPayload = new();
 
@@ -196,7 +198,7 @@ public class DataHandler : IDataHandler
         {
             if (nextPayload.Documents.Count == maxDocsPerRequest || nextPayload.TotalCharLength + doc.Text.Length >= maxCharactersPerRequest)
             {
-                result.Add(nextPayload);
+                payloads.Add(nextPayload);
                 nextPayload = new();
                 nextPayload.Documents.Add(doc);
                 nextPayload.DocumentsMetadata.Add(metadata);
@@ -213,10 +215,10 @@ public class DataHandler : IDataHandler
         }
         if (nextPayload.Documents.Any())
         {
-            result.Add(nextPayload);
+            payloads.Add(nextPayload);
         }
-        _logger.LogInformation($"Completed batching, {documents.Count()}, {result.Sum(r => r.Documents.Count)}");
-        return result;
+        _logger.LogInformation("Prepared next batch of payloads for ta4h: {documentCount}, {payloadCount}", documents.Count(), payloads.Count);
+        return payloads;
     }
 
     public Task UpdateProcessingJobAsync(Ta4hInputPayload payload, string jobId)
