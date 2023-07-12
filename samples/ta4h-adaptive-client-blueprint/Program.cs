@@ -20,12 +20,12 @@ class Program
         try
         {
             await processor.StartAsync();
-            Logger.LogInformation("Applicaiton completed successfully. exiting program in 10 seconds...");
+            Logger.LogInformation("Application completed successfully. exiting program in 10 seconds...");
             await Task.Delay(10000);
         }
         catch (Exception e)
         {
-            Logger.LogError($"Unhandled exception: {e}");
+            Logger.LogError("Unhandled exception: {e}", e);
             Logger.LogError(e, "an unexpected exception occured. exiting program in 10 seconds...");
             await Task.Delay(10000);
             throw;
@@ -36,8 +36,8 @@ class Program
     {
         // Log the unhandled exception details
         var exception = e.ExceptionObject as Exception;
-        Logger.LogError($"Unhandled exception: {exception}");
-        Logger.LogError(exception, "an unexpected exception occured.");
+        Logger.LogError("Unhandled exception caught in UnhandledExceptionHandler: {exception}", exception);
+        Logger.LogError(exception, "an unexpected exception occured. exiting program in 10 seconds...");
     }
 
 
@@ -69,7 +69,6 @@ class Program
         {
             var configuraiton = hostContext.Configuration;
             logging.AddConfiguration(configuraiton.GetSection("Logging"));
-            //logging.AddConsole();
             logging.AddApplicationInsightsLogging(configuraiton);
         });
         return hostBuilder;

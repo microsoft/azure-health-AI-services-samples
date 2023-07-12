@@ -42,16 +42,24 @@ public class HealthcareAnalysisRunner
         var queueProcessingTask = StartJobsQueueProcessingAsync();
         while (true)
         {
-            var nextBatch = await _dataHandler.LoadNextBatchOfPayloadsAsync();
-            if (!nextBatch.Any())
+            var paylods = await _dataHandler.LoadNextBatchOfPayloadsAsync();
+            if (!paylods.Any())
             {
                 _logger.LogInformation("No more payloads to send for processing, waiting for the jobs queue to complete");
                 _datasetCompleted = true;
                 break;
             }
-            foreach (var payload in nextBatch)
+            int size = paylods.Count;
+            var tasks = new List<Task>();
+            for (int i = 0; i < size; i++)
             {
-                await StartPaylodProcessing(payload);
+               var payload = paylods[i];
+               tasks.Add(SendPaylodForProcessing(payload));
+               if (tasks.Count == _dataProcessingOptions.Concurrency || i == size - 1)
+               {
+                    await Task.WhenAll(tasks);
+                    tasks.Clear();
+               }
             }
         }
         await queueProcessingTask;
@@ -61,10 +69,15 @@ public class HealthcareAnalysisRunner
     {
         while (true)
         {
+            var tasks = new List<Task>();
             if (_jobsQueue.TryDequeue(out var item))
             {
-
-                await ProcessQueueItemAsync(item);
+                tasks.Add(ProcessQueueItemAsync(item));
+                if (tasks.Count == _dataProcessingOptions.Concurrency || _jobsQueue.Count == 0 )
+                {
+                    await Task.WhenAll(tasks);
+                    tasks.Clear();
+                }
             }
             else
             {
@@ -89,7 +102,7 @@ public class HealthcareAnalysisRunner
         return;
     }
 
-    private async Task StartPaylodProcessing(Ta4hInputPayload payload)
+    private async Task SendPaylodForProcessing(Ta4hInputPayload payload)
     {
         await WaitIfJobsQueueTooBigAsync();
         var jobId = await _textAnalyticsClient.StartHealthcareAnalysisOperationAsync(payload);
@@ -161,8 +174,8 @@ public class HealthcareAnalysisRunner
             Documents = item.Payload.Documents.Skip(ndocs / 2).ToList(),
             DocumentsMetadata = item.Payload.DocumentsMetadata.Skip(ndocs / 2).ToList()
         };
-        await StartPaylodProcessing(firstHalf);
-        await StartPaylodProcessing(secondHalf);
+        await SendPaylodForProcessing(firstHalf);
+        await SendPaylodForProcessing(secondHalf);
     }
 
     private async Task ProcessSuccessfulJobAsync(QueueItem item, TextAnlyticsJobResponse response)

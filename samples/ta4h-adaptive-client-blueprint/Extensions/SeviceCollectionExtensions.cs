@@ -28,14 +28,22 @@ public static class SeviceCollectionExtensions
             if (storageType == FileSystem)
             {
                 var settingsSection = $"{configSection}:FileSystemSettings";
-                var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
+                var section = configuration.GetSection(settingsSection);
+                if (section.Value == null)
+                {
+                     throw new ConfigurationException(settingsSection, null);
+                }
                 var fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
                 return new FileSystemStorage(fileSystemStorageSettings.BasePath);
             }
             else if (storageType == AzureBlob)
             {
                 var settingsSection = $"{configSection}:AzureBlobSettings";
-                var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
+                var section = configuration.GetSection(settingsSection);
+                if (section.Value == null)
+                {
+                    throw new ConfigurationException(settingsSection, null);
+                }
                 var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>();
                 return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.AuthenticationMethod, azureBlobStorageSettings.ContainerName);
             }
@@ -66,22 +74,22 @@ public static class SeviceCollectionExtensions
         var metadataStorageType = configuration[configKey];
         if (metadataStorageType == InMemory)
         {
-            services.AddSingleton<IDocumentMetadataStore>(new InMemoryDocumentMetadataStore());
+            services.AddSingleton<IDocumentMetadataStore, InMemoryDocumentMetadataStore>();
         }
         else if (metadataStorageType == SQL)
         {
             var settingsSection = "MetadataStorage:SQLSettings";
             var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
-            var dbSettings = section.Get<SQLMetadataStorageSettings>();
-            services.AddSingleton<IDocumentMetadataStore>(new SqlDocumentMetadataStore(dbSettings));
+            services.Configure<SQLMetadataStorageSettings>(section);
+            services.AddSingleton<IDocumentMetadataStore, SqlDocumentMetadataStore>();
 
         }
         else if (metadataStorageType == AzureTable)
         {
             var settingsSection = "MetadataStorage:AzureTableSettings";
             var section = configuration.GetSection(settingsSection) ?? throw new ConfigurationException(settingsSection, null);
-            var settings = section.Get<AzureTableMetadataStorageSettings>();
-            services.AddSingleton<IDocumentMetadataStore>(new AzureTableDocumentMetadataStore(settings));
+            services.Configure<AzureTableMetadataStorageSettings>(section);
+            services.AddSingleton<IDocumentMetadataStore, AzureTableDocumentMetadataStore>();
         }
           
 

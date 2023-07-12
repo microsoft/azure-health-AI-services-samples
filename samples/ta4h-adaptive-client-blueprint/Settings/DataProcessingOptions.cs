@@ -25,6 +25,11 @@
     /// </summary>
     public int RepeatTimes { get; set; } = 1;
 
+    /// <summary>
+    /// Max number of cuncurrent threads when calling the ta4h API
+    /// </summary>
+    public int Concurrency { get; set; } = 10;
+
 
 }
 

@@ -12,12 +12,11 @@ public class TextAnalytics4HealthClient
     private readonly ILogger _logger;
     private readonly Ta4hOptions _options;
 
-    private const string ApiKeyHeaderName = "Ocp-Apim-Subscription-Key"; // "apim-subscription-id"; //
+    private const string ApiKeyHeaderName = "Ocp-Apim-Subscription-Key";
     private const string OperationLocationHeaderName = "Operation-Location";
 
     public TextAnalytics4HealthClient(ILogger<TextAnalytics4HealthClient> logger, IOptions<Ta4hOptions> options)
     {
-
         _options = options.Value;
         _httpClient = new HttpClient();
         _httpClient.BaseAddress = new Uri(_options.Endpoint);
