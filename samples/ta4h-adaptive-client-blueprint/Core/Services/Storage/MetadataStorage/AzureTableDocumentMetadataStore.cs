@@ -186,7 +186,7 @@ public class DocumentMetadataTableEntity : ITableEntity
 
 public static class DocumentMetadataExtensions
 {
-    private static IDictionary<string, DocumentMetadataTableEntity> mapping = new LRUDictionary<string, DocumentMetadataTableEntity>(capacity: 10000);
+    private static IDictionary<string, DocumentMetadataTableEntity> mapping = new Dictionary<string, DocumentMetadataTableEntity>();
     public static DocumentMetadataTableEntity ToTableEntity(this DocumentMetadata documentMetadata)
     {
         var tableEntity = new DocumentMetadataTableEntity

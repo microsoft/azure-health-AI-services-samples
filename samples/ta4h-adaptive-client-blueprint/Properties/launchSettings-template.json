@@ -1,0 +1,36 @@
+{
+  "profiles": {
+    "Ta4hAdaptiveClient-Local": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "Ta4hOptions__ApiKey": "<YOUR_API_KEY>",
+        "Ta4hOptions__Endpoint": "https://<YOUR-LANGUAGE-RESOURCE-NAME>.cognitiveservices.azure.com/",
+        "InputStorage__StorageType": "FileSystem",
+        "InputStorage__BasePath": "<PATH-TO-LOCAL-FOLDER-WITH-TXT-FILES>",
+        "OutputStorage__StorageType": "FileSystem",
+        "OutputStorage__BasePath": "<PATH-TO-OUTPUT-FOLDER-WITH-TXT-FILES>",
+        "MetadataStorage__StorageType": "InMemory"
+      }
+    },
+    "Ta4hAdaptiveClient-Azure": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "Ta4hOptions__ApiKey": "<YOUR_API_KEY>",
+        "Ta4hOptions__Endpoint": "https://<YOUR_LANGUAGE_RESOURCE_NAME>.cognitiveservices.azure.com/",
+        "ApplicationInsights__InstrumentationKey": "<YOUR-INSTRUMENTATION-KEY>",
+        "InputStorage__StorageType": "AzureBlob",
+        "InputStorage__AzureBlobSettings__AuthenticationMethod": "AAD",
+        "InputStorage__AzureBlobSettings__ConnectionString": "https://<YOUR_AZURE_STORAGE_ACCOUNT_NAME>.blob.core.windows.net/",
+        "InputStorage__AzureBlobSettings__ContainerName": "<BLOB-CONTAINER-NAME-FOR-INPUT>",
+        "OutputStorage__StorageType": "AzureBlob",
+        "OutputStorage__AzureBlobSettings__AuthenticationMethod": "AAD",
+        "OutputStorage__AzureBlobSettings__ConnectionString": "https://<YOUR_AZURE_STORAGE_ACCOUNT_NAME>.blob.core.windows.net/",
+        "OutputStorage__AzureBlobSettings__ContainerName": "<BLOB-CONTAINER-NAME-FOR-OUTPUT>",
+        "MetadataStorage__StorageType": "AzureTable",
+        "MetadataStorage__AzureTableSettings__ConnectionString": "https://<YOUR_AZURE_STORAGE_ACCOUNT_NAME>.table.core.windows.net/",
+        "MetadataStorage__AzureTableSettings__AuthenticationMethod": "AAD",
+        "MetadataStorage__AzureTableSettings__TableName": "<METADATA-TABLE-NAME>"
+      }
+    }
+  }
+}
