@@ -19,14 +19,6 @@
         return Task.CompletedTask;
     }
 
-    public Task<DocumentMetadata> GetDocumentMetadataAsync(string documentId)
-    {
-        if (store.TryGetValue(documentId, out var documentMetadata))
-        {
-            return Task.FromResult(documentMetadata);
-        }
-        return Task.FromResult<DocumentMetadata>(null);
-    }
 
     public Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int count)
     {

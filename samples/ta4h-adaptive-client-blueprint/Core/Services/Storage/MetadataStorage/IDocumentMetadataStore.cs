@@ -5,8 +5,6 @@
     /// </summary>
     Task CreateIfNotExistAsync();
 
-    Task<DocumentMetadata> GetDocumentMetadataAsync(string documentId);
-
     Task MarkAsInitializedAsync();
 
     /// <summary>

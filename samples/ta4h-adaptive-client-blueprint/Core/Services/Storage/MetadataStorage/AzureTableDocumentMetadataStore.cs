@@ -9,7 +9,6 @@ using System.Runtime.Serialization;
 
 public class DocumentMetadataTableEntity : DocumentMetadata, ITableEntity
 {
-    private string previosPartitionKey = null;
 
     public string PartitionKey { get; set; } // We'll set this as Status in conversion
     public string RowKey { get; set; } // We'll set this as DocumentId in conversion
@@ -24,25 +23,7 @@ public class DocumentMetadataTableEntity : DocumentMetadata, ITableEntity
     }
 
     [IgnoreDataMember] // This property won't be stored in Azure Table Storage
-    public override ProcessingStatus Status
-    {
-        get 
-        {
-            return Enum.Parse<ProcessingStatus>(PartitionKey, true);
-        }
-        set
-        {
-            var statusString = value.ToString();
-            if (PartitionKey != statusString)
-            {
-                previosPartitionKey = PartitionKey;
-                PartitionKey = statusString;
-            }
-            
-        }
-    }
-
-    public string PreviosPartitionKey() => previosPartitionKey;
+    public override ProcessingStatus Status { get; set; }
 
 }
 
@@ -56,9 +37,9 @@ public static class DocumentMetadataExtensions
         }
         var tableEntity = new DocumentMetadataTableEntity
         {
-            PartitionKey = documentMetadata.Status.ToString(),
             DocumentId = documentMetadata.DocumentId,
             RowKey = documentMetadata.DocumentId.Replace("/", "SLASH"),
+            PartitionKey = documentMetadata.Status == ProcessingStatus.NotStarted ? "NotStarted" : "Started",
             InputPath = documentMetadata.InputPath,
             Status = documentMetadata.Status,
             LastModified = documentMetadata.LastModified,
@@ -78,8 +59,9 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     private const string PasswordAuthentication = "ConnectionString";
     private const string AadAuthetication = "AAD";
     private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication };
-    private const string DefaultPartitionKey = "metadata";
-    
+    private const string SpecialEntryName = "ta4hclientappisinitialized";
+
+
 
     public AzureTableDocumentMetadataStore(IOptions<AzureTableMetadataStorageSettings> options, ILogger<AzureTableDocumentMetadataStore> logger)
     {
@@ -102,14 +84,40 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         var notStartedStatus = Enum.GetName(typeof(ProcessingStatus), ProcessingStatus.NotStarted);
-        var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.StatusString == notStartedStatus, maxPerPage: 500);
+        var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.PartitionKey == "NotStarted", maxPerPage: 500);
         var entries = new List<DocumentMetadata>();
         await foreach (var page in query.AsPages())
         {
             var batchEntitiesToUpdate = page.Values.Take(batchSize - entries.Count).ToList();
-            batchEntitiesToUpdate.ForEach(e => { e.Status = ProcessingStatus.Scheduled; });
-            await BatchUpdateTableEntities(batchEntitiesToUpdate);
-            entries.AddRange(batchEntitiesToUpdate);
+            List<TableTransactionAction> addActions = new List<TableTransactionAction>();
+            List<TableTransactionAction> deleteActions = new List<TableTransactionAction>();
+
+            for (int i =0; i < batchEntitiesToUpdate.Count; i++)
+            {
+                // because the partition key of "NotStarted" entries is different from entries with other Status, we cannot update the entry.
+                // We need instead to create a new one and delete the previous one.
+                var existingEntry = batchEntitiesToUpdate[i];
+                var newEntry =new DocumentMetadataTableEntity
+                {
+                    DocumentId = existingEntry.DocumentId,
+                    RowKey = existingEntry.RowKey,
+                    PartitionKey = "Started",
+                    InputPath = existingEntry.InputPath,
+                    Status = ProcessingStatus.Scheduled,
+                    LastModified = DateTime.UtcNow,
+                    ResultsPath = existingEntry.ResultsPath
+                };
+                deleteActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, existingEntry));
+                addActions.Add(new TableTransactionAction(TableTransactionActionType.Add, newEntry));
+                if (addActions.Count == 100 || (addActions.Count > 0 && i == batchEntitiesToUpdate.Count - 1))
+                {
+                    await _tableClient.SubmitTransactionAsync(addActions);
+                    await _tableClient.SubmitTransactionAsync(deleteActions);
+                    entries.AddRange(addActions.Select(a => a.Entity as DocumentMetadataTableEntity));
+                    addActions.Clear();
+                    deleteActions.Clear();
+                }
+            }
 
             if (entries.Count >= batchSize)
             {
@@ -129,18 +137,6 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
         return UpdateEntriesStatusAsync(new List<DocumentMetadata> { entry }, entry.Status, entry.JobId);
     }
 
-    public async Task<DocumentMetadata> GetDocumentMetadataAsync(string documentId)
-    {
-        try
-        {
-            var response = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>(DefaultPartitionKey, documentId);
-            return response.Value;
-        }
-        catch (RequestFailedException ex) when (ex.Status == 404)
-        {
-            return null;
-        }
-    }
 
     public async Task UpdateEntriesStatusAsync(List<DocumentMetadata> entries, ProcessingStatus newStatus, string jobId = null)
     {
@@ -160,9 +156,8 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     {
         var specialEntry = new DocumentMetadataTableEntity
         {
-            RowKey = "ta4hclientappisinitialized",
-            PartitionKey = "ta4hclientappisinitialized",
-            DocumentId = "ta4hclientappisinitialized",
+            RowKey = SpecialEntryName,
+            PartitionKey = SpecialEntryName,
             LastModified = DateTime.UtcNow,
             Status = ProcessingStatus.Succeeded
         };
@@ -184,7 +179,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     {
         try
         {
-            var _ = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>("Succeeded", "ta4hclientappisinitialized");
+            var _ = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>(SpecialEntryName, SpecialEntryName);
             return true;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
