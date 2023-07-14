@@ -92,8 +92,8 @@ az role assignment create --role "Storage Table Data Contributor" --assignee <yo
 
 7. Load the input data into blob storage:
 ```
-az storage container create --name <container-name> --account-name <storage-account-name> --auth-mode login
-az storage blob upload-batch --destination <container-name> --source <local-folder-path> --account-name <storage-account-name> --auth-mode login
+az storage container create --name <input-blob-container-name> --account-name <storage-account-name> --auth-mode login
+az storage blob upload-batch --destination <input-blob-container-name> --source <input-txt-files-local-dir> --account-name <storage-account-name> --auth-mode login
 ```
 
 8. Create the ACR:

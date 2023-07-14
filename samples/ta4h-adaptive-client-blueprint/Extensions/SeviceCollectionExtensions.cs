@@ -94,10 +94,17 @@ public static class SeviceCollectionExtensions
 
     public static ILoggingBuilder AddApplicationInsightsLogging(this ILoggingBuilder logging, IConfiguration configuraiton)
     {
-        var instrumentationKey = configuraiton["ApplicationInsights:InstrumentationKey"];
-        if (instrumentationKey != null)
+        var appInsightsConnectionString = configuraiton["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+        if (appInsightsConnectionString != null)
         {
-            logging.AddApplicationInsights(instrumentationKey);
+            logging.AddApplicationInsights(configureTelemetryConfiguration: config => 
+            {
+                config.ConnectionString = appInsightsConnectionString;
+
+            }, configureApplicationInsightsLoggerOptions: options => 
+            {
+                options.TrackExceptionsAsExceptionTelemetry = false;
+            });
             logging.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>
                              ("", LogLevel.Debug);
             logging.Services.AddDependencyTracking(configuraiton);
@@ -110,7 +117,7 @@ public static class SeviceCollectionExtensions
         // Application Insights Dependency Tracking
         var telemetryConfiguration = new TelemetryConfiguration
         {
-            InstrumentationKey = configuration["ApplicationInsights:InstrumentationKey"]
+            ConnectionString = configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
         };
         var dependencyTrackingModule = new DependencyTrackingTelemetryModule();
         dependencyTrackingModule.Initialize(telemetryConfiguration);
