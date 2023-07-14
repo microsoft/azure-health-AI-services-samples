@@ -4,7 +4,7 @@
 
     public string InputPath { get; set; }
 
-    public ProcessingStatus Status { get; set; }
+    public virtual ProcessingStatus Status { get; set; }
 
     public DateTime LastModified { get; set; }
 

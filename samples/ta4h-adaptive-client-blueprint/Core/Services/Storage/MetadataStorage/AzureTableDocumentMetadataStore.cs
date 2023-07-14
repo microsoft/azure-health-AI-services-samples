@@ -3,225 +3,70 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 
-public class LRUDictionary<TKey, TValue> : IDictionary<TKey, TValue>
+public class DocumentMetadataTableEntity : DocumentMetadata, ITableEntity
 {
-    private readonly int capacity;
-    private readonly Dictionary<TKey, LinkedListNode<CacheItem>> cache;
-    private readonly LinkedList<CacheItem> lruList;
+    private string previosPartitionKey = null;
 
-    public LRUDictionary(int capacity)
-    {
-        this.capacity = capacity;
-        this.cache = new Dictionary<TKey, LinkedListNode<CacheItem>>(capacity);
-        this.lruList = new LinkedList<CacheItem>();
-    }
-
-    public TValue this[TKey key]
-    {
-        get
-        {
-            if (TryGetValue(key, out var value))
-            {
-                return value;
-            }
-            else
-            {
-                throw new KeyNotFoundException($"The key {key} was not found in the cache.");
-            }
-        }
-        set => AddOrUpdate(key, value);
-    }
-
-    public ICollection<TKey> Keys => cache.Keys;
-
-    public ICollection<TValue> Values
-    {
-        get
-        {
-            var values = new List<TValue>(cache.Count);
-            foreach (var node in cache.Values)
-            {
-                values.Add(node.Value.Value);
-            }
-
-            return values;
-        }
-    }
-
-    public int Count => cache.Count;
-
-    public bool IsReadOnly => false;
-
-    public void Add(TKey key, TValue value) => AddOrUpdate(key, value);
-
-    public void Add(KeyValuePair<TKey, TValue> item) => AddOrUpdate(item.Key, item.Value);
-
-    public void Clear()
-    {
-        cache.Clear();
-        lruList.Clear();
-    }
-
-    public bool Contains(KeyValuePair<TKey, TValue> item)
-    {
-        if (TryGetValue(item.Key, out var value))
-        {
-            return EqualityComparer<TValue>.Default.Equals(value, item.Value);
-        }
-
-        return false;
-    }
-
-    public bool ContainsKey(TKey key) => cache.ContainsKey(key);
-
-    public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
-    {
-        foreach (var pair in this)
-        {
-            array[arrayIndex++] = pair;
-        }
-    }
-
-    public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-    {
-        foreach (var node in cache)
-        {
-            yield return new KeyValuePair<TKey, TValue>(node.Value.Value.Key, node.Value.Value.Value);
-        }
-    }
-
-
-    public bool Remove(TKey key)
-    {
-        if (cache.TryGetValue(key, out var node))
-        {
-            lruList.Remove(node);
-            cache.Remove(key);
-            return true;
-        }
-
-        return false;
-    }
-
-    public bool Remove(KeyValuePair<TKey, TValue> item)
-    {
-        if (Contains(item))
-        {
-            return Remove(item.Key);
-        }
-
-        return false;
-    }
-
-    public bool TryGetValue(TKey key, out TValue value)
-    {
-        if (cache.TryGetValue(key, out var node))
-        {
-            // Item found, move it to the front of the LRU list
-            value = node.Value.Value;
-            lruList.Remove(node);
-            lruList.AddFirst(node);
-            return true;
-        }
-        else
-        {
-            // Not found
-            value = default;
-            return false;
-        }
-    }
-
-    private void AddOrUpdate(TKey key, TValue value)
-    {
-        if (cache.Count >= capacity && !cache.ContainsKey(key))
-        {
-            // Cache is full and the key isn't in the cache, remove the least recently used item
-            var lastNode = lruList.Last;
-            cache.Remove(lastNode.Value.Key);
-            lruList.RemoveLast();
-        }
-
-        if (cache.TryGetValue(key, out var node))
-        {
-            // Item is already in the cache, move it to the front and update the value
-            node.Value = new CacheItem(key, value);
-            lruList.Remove(node);
-            lruList.AddFirst(node);
-        }
-        else
-        {
-            // Add item at the front of the LRU list
-            var newNode = new LinkedListNode<CacheItem>(new CacheItem(key, value));
-            lruList.AddFirst(newNode);
-            cache.Add(key, newNode);
-        }
-    }
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    private record CacheItem(TKey Key, TValue Value);
-}
-
-
-public class DocumentMetadataTableEntity : ITableEntity
-{
     public string PartitionKey { get; set; } // We'll set this as Status in conversion
     public string RowKey { get; set; } // We'll set this as DocumentId in conversion
 
-    public string DocumentId { get; set; }
     public DateTimeOffset? Timestamp { get; set; }
     public ETag ETag { get; set; }
 
-    public string InputPath { get; set; }
-    public string Status { get; set; }
-    public DateTime LastModified { get; set; }
-    public string ResultsPath { get; set; }
-    public string JobId { get; set; }
+    public string StatusString
+    {
+        get => Status.ToString();
+        set => Status = Enum.Parse<ProcessingStatus>(value, true);
+    }
+
+    [IgnoreDataMember] // This property won't be stored in Azure Table Storage
+    public override ProcessingStatus Status
+    {
+        get 
+        {
+            return Enum.Parse<ProcessingStatus>(PartitionKey, true);
+        }
+        set
+        {
+            var statusString = value.ToString();
+            if (PartitionKey != statusString)
+            {
+                previosPartitionKey = PartitionKey;
+                PartitionKey = statusString;
+            }
+            
+        }
+    }
+
+    public string PreviosPartitionKey() => previosPartitionKey;
+
 }
 
 public static class DocumentMetadataExtensions
 {
-    private static IDictionary<string, DocumentMetadataTableEntity> mapping = new Dictionary<string, DocumentMetadataTableEntity>();
-    public static DocumentMetadataTableEntity ToTableEntity(this DocumentMetadata documentMetadata)
+    public static DocumentMetadataTableEntity AsDocumentMetadataTableEntity(this DocumentMetadata documentMetadata)
     {
+        if (documentMetadata is DocumentMetadataTableEntity)
+        {
+            return documentMetadata as DocumentMetadataTableEntity;
+        }
         var tableEntity = new DocumentMetadataTableEntity
         {
-            PartitionKey = "meatadata",
+            PartitionKey = documentMetadata.Status.ToString(),
             DocumentId = documentMetadata.DocumentId,
             RowKey = documentMetadata.DocumentId.Replace("/", "SLASH"),
             InputPath = documentMetadata.InputPath,
-            Status = Enum.GetName(typeof(ProcessingStatus), documentMetadata.Status),
+            Status = documentMetadata.Status,
             LastModified = documentMetadata.LastModified,
             ResultsPath = documentMetadata.ResultsPath,
             JobId = documentMetadata.JobId        
         };
-        if (mapping.TryGetValue(tableEntity.DocumentId, out var ta))
-        {
-            ta.Status = tableEntity.Status;
-            ta.LastModified = tableEntity.LastModified;
-            ta.JobId = tableEntity.JobId;
-            return ta;
-        }
-        return tableEntity;
-    }
 
-    public static DocumentMetadata ToDocumentMetadata(this DocumentMetadataTableEntity entity)
-    {
-        mapping[entity.DocumentId] = entity;
-        return new DocumentMetadata
-        {
-            DocumentId = entity.DocumentId,
-            InputPath = entity.InputPath,
-            Status = (ProcessingStatus)Enum.Parse(typeof(ProcessingStatus), entity.Status),
-            LastModified = entity.LastModified,
-            ResultsPath = entity.ResultsPath,
-            JobId = entity.JobId
-        };
+        return tableEntity;
     }
 }
 
@@ -257,15 +102,14 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         var notStartedStatus = Enum.GetName(typeof(ProcessingStatus), ProcessingStatus.NotStarted);
-        var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.Status == notStartedStatus, maxPerPage: 500);
+        var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.StatusString == notStartedStatus, maxPerPage: 500);
         var entries = new List<DocumentMetadata>();
         await foreach (var page in query.AsPages())
         {
             var batchEntitiesToUpdate = page.Values.Take(batchSize - entries.Count).ToList();
-            string scheduledStr = Enum.GetName(typeof(ProcessingStatus), ProcessingStatus.Scheduled);
-            batchEntitiesToUpdate.ForEach(e => { e.Status = scheduledStr; });
+            batchEntitiesToUpdate.ForEach(e => { e.Status = ProcessingStatus.Scheduled; });
             await BatchUpdateTableEntities(batchEntitiesToUpdate);
-            entries.AddRange(batchEntitiesToUpdate.Select(e => e.ToDocumentMetadata()));
+            entries.AddRange(batchEntitiesToUpdate);
 
             if (entries.Count >= batchSize)
             {
@@ -290,7 +134,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
         try
         {
             var response = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>(DefaultPartitionKey, documentId);
-            return response.Value.ToDocumentMetadata();
+            return response.Value;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
@@ -308,7 +152,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
                 entry.JobId = jobId;
             }
         }
-        var tableEntries = entries.Select(e => e.ToTableEntity());
+        var tableEntries = entries.Select(e => e.AsDocumentMetadataTableEntity());
         await BatchUpdateTableEntities(tableEntries.ToList());
     }
 
@@ -319,7 +163,8 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
             RowKey = "ta4hclientappisinitialized",
             PartitionKey = "ta4hclientappisinitialized",
             DocumentId = "ta4hclientappisinitialized",
-            LastModified = DateTime.UtcNow
+            LastModified = DateTime.UtcNow,
+            Status = ProcessingStatus.Succeeded
         };
         await _tableClient.AddEntityAsync(specialEntry);
     }
@@ -330,7 +175,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 
         foreach (var entry in entries)
         {
-            transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, entry.ToTableEntity()));
+            transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, entry.AsDocumentMetadataTableEntity()));
         }
         await _tableClient.SubmitTransactionAsync(transactionActions);
     }
@@ -339,7 +184,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     {
         try
         {
-            var _ = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>("ta4hclientappisinitialized", "ta4hclientappisinitialized");
+            var _ = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>("Succeeded", "ta4hclientappisinitialized");
             return true;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
@@ -355,7 +200,6 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
         foreach (var entry in batchEntitiesToUpdate)
         {
             entry.LastModified = DateTime.UtcNow;
-
             transactionActions.Add(new TableTransactionAction(TableTransactionActionType.UpdateMerge, entry));
             if (transactionActions.Count == 100)
             {
