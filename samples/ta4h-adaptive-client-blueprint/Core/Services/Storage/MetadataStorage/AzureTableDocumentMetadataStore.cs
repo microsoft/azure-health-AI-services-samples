@@ -278,26 +278,6 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 
     }
 
-    private async Task BatchUpdateTableEntities(List<DocumentMetadataTableEntity> batchEntitiesToUpdate)
-    {
-        List<TableTransactionAction> transactionActions = new List<TableTransactionAction>();
-
-        foreach (var entry in batchEntitiesToUpdate)
-        {
-            entry.LastModified = DateTime.UtcNow;
-
-            transactionActions.Add(new TableTransactionAction(TableTransactionActionType.UpdateMerge, entry));
-            if (transactionActions.Count == 100)
-            {
-                var responses = await _tableClient.SubmitTransactionAsync(transactionActions);
-                transactionActions.Clear();
-            }
-        }
-        if (transactionActions.Any())
-        {
-            var responses = await _tableClient.SubmitTransactionAsync(transactionActions);
-        }
-    }
 
     public Task UpdateEntryAsync(DocumentMetadata entry)
     {
@@ -365,6 +345,27 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
             return false;
+        }
+    }
+
+    private async Task BatchUpdateTableEntities(List<DocumentMetadataTableEntity> batchEntitiesToUpdate)
+    {
+        List<TableTransactionAction> transactionActions = new List<TableTransactionAction>();
+
+        foreach (var entry in batchEntitiesToUpdate)
+        {
+            entry.LastModified = DateTime.UtcNow;
+
+            transactionActions.Add(new TableTransactionAction(TableTransactionActionType.UpdateMerge, entry));
+            if (transactionActions.Count == 100)
+            {
+                var responses = await _tableClient.SubmitTransactionAsync(transactionActions);
+                transactionActions.Clear();
+            }
+        }
+        if (transactionActions.Any())
+        {
+            var responses = await _tableClient.SubmitTransactionAsync(transactionActions);
         }
     }
 }

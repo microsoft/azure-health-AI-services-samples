@@ -1,15 +1,25 @@
 ## Text Analytics for Health Adaptive Client for Processing Large Volumes of Data
 
+This sample provides code and best practices on how to process large volumes of data using Text Analytics for Health in a scalable way.
+
 
 #### prerequeisites
 
 #### components
-- Azure Language Resource
-- Azure Container Registry (ACR)
-- Azure Container Instances (ACI)
-- Application Insights
-- Azure Storage
-- Azure sql database (??)
+-  **Input Storage** - this is where the all the documents are stored. This could be a local file system storage, muonted volume, an azure blob storage or any other implementation that supports storage of files using paths.
+ The default implmentation assumes that every .txt file under the input storage location should be sent to processing by TA4H.
+-  **Output Storage** - this is where the results of TA4H analysis will be stored as json files.
+-  **Client Application** - reads the documents from the Input storage, sends them analytis using the TA4H API, and stored where results once they're ready.
+-  **Metadata Storage** - this is where the data about what documents exists and what is their processing status is stored.
+
+####
+
+#### Application Runtime Flow
+- Find all text files in the Input Storage
+- While there are still documents to be processed:
+  - load a batch of text documents
+  - group the documents into "payloads" of multiple documents (the Text Analytics API can handle up to 25 documents in one request).
+  - send the pyloads
 
 
 ## Running the Application Locally
@@ -35,46 +45,55 @@ When working with large datasets, the processing can take many hours or days, an
 Follow these steps to deploy the Text Analytics for Health Adaptive Client for Processing Large Volumes of Data on Azure:
 
 
+
 1. Create a Resource Group:
 ```
 az group create --name <resource-group-name> --location <location>
 ```
 
-2. Create the Language Resource:
+2. Create the Language Resource.
+*Note: if you already have a language resource in this region, you can skip this step and just use the api key of the existing resource*  
 ```
-az cognitiveservices account create --name <resource-name> --resource-group <resource-group-name> --kind TextAnalytics --sku <sku-name> --location <location> --yes
+az cognitiveservices account create --name <language-resource-name> --resource-group <resource-group-name> --kind TextAnalytics --sku S --location <location> --yes
 ```
 
-3. Get the billing endpoint and apiKey:
+3. Get the language resource apiKey:
 ```
-az cognitiveservices account keys list --name <resource-name> --resource-group <resource-group-name>
+az cognitiveservices account keys list --name <language-resource-name> --resource-group <resource-group-name>
 ```
 
 4. Create a Managed Identity that will be used for the container instance:
 ```
 az identity create --name <identity-name> --resource-group <resource-group-name>
 ```
+```
+az identity list --resource-group <resource-group-name>
+```
+
+copy the "clientId" value from the response, you will need it for role assignments in the next steps
+
 
 5. Create an Azure Storage account:
 ```
-az storage account create --name <storage-account-name> --resource-group <resource-group-name> --location <location> --sku Standard_LRS
+az storage account create --name <storage-account-name> --resource-group <resource-group-name> --sku Standard_LRS
 ```
 
-6. Add role assignments for blob read/write access and table read/write access to the managed identity you created. Also, recommended to add your personal Azure identity for debug purposes:
+6. Add role assignments for blob read/write access and table read/write access to the managed identity you created.
 ```
 az role assignment create --role "Storage Blob Data Contributor" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
-az role assignment create --role "Storage Blob Data Reader" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 az role assignment create --role "Storage Table Data Contributor" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
-az role assignment create --role "Storage Table Data Reader" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
+```
+
+7. If you want to run the application locally with azure storage, add your identity as well
+```
 az role assignment create --role "Storage Blob Data Contributor" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
-az role assignment create --role "Storage Blob Data Reader" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 az role assignment create --role "Storage Table Data Contributor" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
-az role assignment create --role "Storage Table Data Reader" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 ```
 
 7. Load the input data into blob storage:
 ```
-az storage blob upload-batch --destination <container-name> --source <local-folder-path> --account-name <storage-account-name>
+az storage container create --name <container-name> --account-name <storage-account-name> --auth-mode login
+az storage blob upload-batch --destination <container-name> --source <local-folder-path> --account-name <storage-account-name> --auth-mode login
 ```
 
 8. Create the ACR:
@@ -104,7 +123,9 @@ docker push <acr-name>.azurecr.io/<image-name>:<tag>
 
 13. Create Application Insights:
 ```
-az monitor app-insights component create --app <app-name> --resource-group <resource-group-name> --location <location> --kind web --application-type web --retention-time 30 --tags <tags>
+az monitor log-analytics workspace create --resource-group <resource-group-name> --workspace-name <workspace-name>
+az extension add -n application-insights
+az monitor app-insights component create --app ta4hAdaptiveClient --location <location> --kind web --resource-group <resource-group-name>  --workspace "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/microsoft.operationalinsights/workspaces/<workspace-name>"
 ```
 
 14. Get the instrumentation key:

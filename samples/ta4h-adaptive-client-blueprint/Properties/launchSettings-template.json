@@ -17,7 +17,7 @@
       "environmentVariables": {
         "Ta4hOptions__ApiKey": "<YOUR_API_KEY>",
         "Ta4hOptions__Endpoint": "https://<YOUR_LANGUAGE_RESOURCE_NAME>.cognitiveservices.azure.com/",
-        "ApplicationInsights__InstrumentationKey": "<YOUR-INSTRUMENTATION-KEY>",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "<YOUR-APPLICATIONINSIGHTS-CONNECTION-STRING>",
         "InputStorage__StorageType": "AzureBlob",
         "InputStorage__AzureBlobSettings__AuthenticationMethod": "AAD",
         "InputStorage__AzureBlobSettings__ConnectionString": "https://<YOUR_AZURE_STORAGE_ACCOUNT_NAME>.blob.core.windows.net/",

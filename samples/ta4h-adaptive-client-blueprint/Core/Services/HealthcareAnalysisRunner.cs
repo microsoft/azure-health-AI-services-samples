@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
@@ -33,13 +34,17 @@ public class HealthcareAnalysisRunner
 
     public int MaxAllowedPendingJobsSize { get; private set; }
 
-
-    public async Task StartAsync()
+    public async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-
-        _logger.LogInformation($"{nameof(StartAsync)} called");
-
+        var documentSendingTask = StartSendingAllDocumentsToTA4H();
         var queueProcessingTask = StartJobsQueueProcessingAsync();
+        await documentSendingTask;
+        await queueProcessingTask;
+    }
+
+
+    private async Task StartSendingAllDocumentsToTA4H()
+    {
         while (true)
         {
             var paylods = await _dataHandler.LoadNextBatchOfPayloadsAsync();
@@ -53,16 +58,15 @@ public class HealthcareAnalysisRunner
             var tasks = new List<Task>();
             for (int i = 0; i < size; i++)
             {
-               var payload = paylods[i];
-               tasks.Add(SendPaylodForProcessing(payload));
-               if (tasks.Count == _dataProcessingOptions.Concurrency || i == size - 1)
-               {
+                var payload = paylods[i];
+                tasks.Add(SendPaylodForProcessing(payload));
+                if (tasks.Count == _dataProcessingOptions.Concurrency || i == size - 1)
+                {
                     await Task.WhenAll(tasks);
                     tasks.Clear();
-               }
+                }
             }
         }
-        await queueProcessingTask;
     }
 
     private async Task StartJobsQueueProcessingAsync()
@@ -233,5 +237,6 @@ public class HealthcareAnalysisRunner
     {
         return TimeSpan.FromMilliseconds(inputSize) + TimeSpan.FromSeconds(2);
     }
+
 
 }

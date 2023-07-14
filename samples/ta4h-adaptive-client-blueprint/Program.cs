@@ -12,32 +12,26 @@ class Program
 
     static async Task Main(string[] args)
     {
-        AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
         using IHost host = CreateHostBuilder(args).Build();
-        var processor = host.Services.GetRequiredService<HealthcareAnalysisRunner>();
+        var runner = host.Services.GetRequiredService<HealthcareAnalysisRunner>();
         Logger = host.Services.GetRequiredService<ILogger<Program>>();
+        var cts = new CancellationTokenSource();
 
         try
         {
-            await processor.StartAsync();
+            await runner.ExecuteAsync(cts.Token);
             Logger.LogInformation("Application completed successfully. exiting program in 10 seconds...");
             await Task.Delay(10000);
         }
         catch (Exception e)
         {
+            cts.Cancel();
             Logger.LogError("Unhandled exception: {e}", e);
             Logger.LogError(e, "an unexpected exception occured. exiting program in 10 seconds...");
             await Task.Delay(10000);
             throw;
         }
-    }
 
-    static void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
-    {
-        // Log the unhandled exception details
-        var exception = e.ExceptionObject as Exception;
-        Logger.LogError("Unhandled exception caught in UnhandledExceptionHandler: {exception}", exception);
-        Logger.LogError(exception, "an unexpected exception occured. exiting program in 10 seconds...");
     }
 
 
@@ -63,6 +57,7 @@ class Program
             .AddSingleton<IDataHandler, DataHandler>()
             .AddSingleton<TextAnalytics4HealthClient>()
             .AddSingleton<HealthcareAnalysisRunner>();
+
              //.AddHttpClientWithPolicies();
 
         }).ConfigureLogging((hostContext, logging) =>
