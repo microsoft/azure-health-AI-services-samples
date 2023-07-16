@@ -1,5 +1,5 @@
 /samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/.vs
-/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/bin/Debug/net6.0
+/samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/bin
 /samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/obj
 /samples/ta4h-container-e2e-sample/TextAnalyticsForHealthAsync-Client/Properties/PublishProfiles
 /samples/ta4h-container-e2e-sample/StressTestConsoleClient/.vs
@@ -7,4 +7,7 @@
 /samples/ta4h-container-e2e-sample/StressTestConsoleClient/obj
 /samples/ta4h-adaptive-client-blueprint/env
 /samples/ta4h-adaptive-client-blueprint/.vscode
-/samples/ta4h-adaptive-client-blueprint/Deployment
+/.vs/azure-health-AI-services-samples/FileContentIndex
+/.vs/azure-health-AI-services-samples/v17
+/.vs/VSWorkspaceState.json
+*.sqlite

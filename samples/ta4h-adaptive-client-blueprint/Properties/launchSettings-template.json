@@ -3,7 +3,7 @@
     "Ta4hAdaptiveClient-Local": {
       "commandName": "Project",
       "environmentVariables": {
-        "Ta4hOptions__ApiKey": "<language-resource-api_key>",
+        "Ta4hOptions__ApiKey": "<language-resource-api-key>",
         "Ta4hOptions__Endpoint": "https://<language-resource-name>.cognitiveservices.azure.com/",
         "InputStorage__StorageType": "FileSystem",
         "InputStorage__BasePath": "<input-txt-files-local-dir>",
@@ -15,9 +15,9 @@
     "Ta4hAdaptiveClient-Azure": {
       "commandName": "Project",
       "environmentVariables": {
-        "Ta4hOptions__ApiKey": "<language-resource-api_key>",
-        "Ta4hOptions__Endpoint": "https://<language-resource-name>.cognitiveservices.azure.com/",
-        "APPLICATIONINSIGHTS_CONNECTION_STRING": "<applicationinsights-connection-string>",
+        "Ta4hOptions__ApiKey": "<language-resource-api-key>",
+        "Ta4hOptions__Endpoint": "https://<location>.api.cognitive.microsoft.com/",
+        "ApplicationInsights__ConnectionString": "<appinsights-connection-string>",
         "InputStorage__StorageType": "AzureBlob",
         "InputStorage__AzureBlobSettings__AuthenticationMethod": "AAD",
         "InputStorage__AzureBlobSettings__ConnectionString": "https://<storage-account-name>.blob.core.windows.net/",
@@ -29,7 +29,7 @@
         "MetadataStorage__StorageType": "AzureTable",
         "MetadataStorage__AzureTableSettings__ConnectionString": "https://<storage-account-name>.table.core.windows.net/",
         "MetadataStorage__AzureTableSettings__AuthenticationMethod": "AAD",
-        "MetadataStorage__AzureTableSettings__TableName": "<metadata-table-name>"
+        "MetadataStorage__AzureTableSettings__TableName": "<metadata-storage-table-name>"
       }
     }
   }

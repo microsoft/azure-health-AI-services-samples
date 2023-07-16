@@ -37,7 +37,7 @@ public static class SeviceCollectionExtensions
                 var settingsSection = $"{configSection}:AzureBlobSettings";
                 var section = configuration.GetSection(settingsSection);
                 var azureBlobStorageSettings = section.Get<AzureBlobStorageSettings>() ?? throw new ConfigurationException(settingsSection, null);
-                return new AzureBlobStorage(azureBlobStorageSettings.ConnectionString, azureBlobStorageSettings.AuthenticationMethod, azureBlobStorageSettings.ContainerName);
+                return new AzureBlobStorage(azureBlobStorageSettings);
             }
             else if (storageType == Noop)
             {
@@ -94,7 +94,7 @@ public static class SeviceCollectionExtensions
 
     public static ILoggingBuilder AddApplicationInsightsLogging(this ILoggingBuilder logging, IConfiguration configuraiton)
     {
-        var appInsightsConnectionString = configuraiton["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+        var appInsightsConnectionString = configuraiton["ApplicationInsights:ConnectionString"];
         if (appInsightsConnectionString != null)
         {
             logging.AddApplicationInsights(configureTelemetryConfiguration: config => 
@@ -117,7 +117,7 @@ public static class SeviceCollectionExtensions
         // Application Insights Dependency Tracking
         var telemetryConfiguration = new TelemetryConfiguration
         {
-            ConnectionString = configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
+            ConnectionString = configuration["ApplicationInsights:ConnectionString"]
         };
         var dependencyTrackingModule = new DependencyTrackingTelemetryModule();
         dependencyTrackingModule.Initialize(telemetryConfiguration);

@@ -2,6 +2,7 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,22 +17,23 @@ public class AzureBlobStorage : IFileStorage
     private const string AadAuthentication = "AAD";
     private static string[] ValidAuthenticationMethods = new[] { ConstringAuthentication, AadAuthentication };
 
-    public AzureBlobStorage(string connectionString, string authenticationMethod, string containerName)
+    public AzureBlobStorage(AzureBlobStorageSettings settings)
     {
-        if (authenticationMethod == ConstringAuthentication)
+        if (settings.AuthenticationMethod == ConstringAuthentication)
         {
-            _blobServiceClient = new BlobServiceClient(connectionString);
+            _blobServiceClient = new BlobServiceClient(settings.ConnectionString);
         }
-        else if (authenticationMethod == AadAuthentication)
+        else if (settings.AuthenticationMethod == AadAuthentication)
         {
             var credential = new DefaultAzureCredential();
-            _blobServiceClient = new BlobServiceClient(new Uri(connectionString), credential);
+            _blobServiceClient = new BlobServiceClient(new Uri(settings.ConnectionString), credential);
         }
         else
         {
-            throw new ConfigurationException("InputStorage:AzureBlobSettings:AuthenticationMethod", authenticationMethod, ValidAuthenticationMethods);
+            throw new ConfigurationException("AzureBlobSettings:AuthenticationMethod", settings.AuthenticationMethod, ValidAuthenticationMethods);
         }
-        _containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        _containerClient = _blobServiceClient.GetBlobContainerClient(settings.ContainerName);
+        _containerClient.CreateIfNotExists();
         _jsonSerializationOptions = new JsonSerializerOptions
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -79,17 +81,9 @@ public class AzureBlobStorage : IFileStorage
     public async Task SaveJsonFileAsync<T>(T obj, string blobName)
     {
         var blobClient = _containerClient.GetBlobClient(blobName);
-
-        try
-        {
-            var jsonString = JsonSerializer.Serialize(obj, _jsonSerializationOptions);
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonString));
-            await blobClient.UploadAsync(stream, true);
-        }
-        catch (RequestFailedException ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
+        var jsonString = JsonSerializer.Serialize(obj, _jsonSerializationOptions);
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonString));
+        await blobClient.UploadAsync(stream, true);
     }
 
 }

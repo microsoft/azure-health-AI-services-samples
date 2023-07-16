@@ -1,0 +1,55 @@
+apiVersion: '2021-10-01'
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    {'/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<identity-name>':{}}
+location: <location>
+name: <image-name>
+properties:
+  containers:
+  - name: <image-name>
+    properties:
+      image: <acr-name>.azurecr.io/<image-name>:<image-tag>
+      resources:
+        requests:
+          cpu: 2.0
+          memoryInGb: 2.5
+      environmentVariables:
+      - name: Ta4hOptions__Endpoint
+        value: https://<location>.api.cognitive.microsoft.com/
+      - name: Ta4hOptions__ApiKey
+        secureValue: <language-resource-api-key>
+      - name: InputStorage__StorageType
+        value: AzureBlob
+      - name: InputStorage__AzureBlobSettings__AuthenticationMethod
+        value: AAD
+      - name: InputStorage__AzureBlobSettings__ContainerName
+        value: <input-blob-container-name>
+      - name: OutputStorage__StorageType
+        value: AzureBlob
+      - name: OutputStorage__AzureBlobSettings__AuthenticationMethod
+        value: AAD
+      - name: OutputStorage__AzureBlobSettings__ContainerName
+        value: <output-blob-container-name>
+      - name: MetadataStorage__StorageType
+        value: AzureTable
+      - name: MetadataStorage__AzureTableSettings__AuthenticationMethod
+        value: AAD
+      - name: MetadataStorage__AzureTableSettings__TableName
+        value: <metadata-storage-table-name>
+      - name: ApplicationInsights__ConnectionString
+        secureValue: <appinsights-connection-string>
+      - name: InputStorage__AzureBlobSettings__ConnectionString
+        secureValue: https://<storage-account-name>.blob.core.windows.net/
+      - name: OutputStorage__AzureBlobSettings__ConnectionString
+        secureValue: https://<storage-account-name>.blob.core.windows.net/
+      - name: MetadataStorage__AzureTableSettings__ConnectionString
+        secureValue: https://<storage-account-name>.table.core.windows.net/
+  imageRegistryCredentials:
+  - server: <acr-name>.azurecr.io
+    identity: '/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<identity-name>'
+  restartPolicy: Never
+
+  osType: Linux
+tags: {}
+type: Microsoft.ContainerInstance/containerGroups

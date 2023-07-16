@@ -84,58 +84,58 @@ az role assignment create --role "Storage Blob Data Contributor" --assignee <man
 az role assignment create --role "Storage Table Data Contributor" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 ```
 
-7. If you want to run the application locally with azure storage, add your identity as well
+1. If you want to run the application locally with azure storage, add your identity as well
 ```
 az role assignment create --role "Storage Blob Data Contributor" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 az role assignment create --role "Storage Table Data Contributor" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 ```
 
-7. Load the input data into blob storage:
+1. Load the input data into blob storage:
 ```
 az storage container create --name <input-blob-container-name> --account-name <storage-account-name> --auth-mode login
 az storage blob upload-batch --destination <input-blob-container-name> --source <input-txt-files-local-dir> --account-name <storage-account-name> --auth-mode login
 ```
 
-8. Create the ACR:
+1. Create the ACR:
 ```
 az acr create --resource-group <resource-group-name> --name <acr-name> --sku Basic
 ```
 
-9. Assign read access to the managed identity you created:
+1. Assign read access to the managed identity you created:
 ```
 az role assignment create --role "AcrPull" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.ContainerRegistry/registries/<acr-name>
 ```
 
-10. Build the application using the Dockerfile. Name the image with the name of the registry you created:
+1.  Build the application using the Dockerfile. Name the image with the name of the registry you created:
 ```
 docker build -t <acr-name>.azurecr.io/<image-name>:<tag> .
 ```
 
-11. Login to the ACR:
+1.  Login to the ACR:
 ```
 az acr login --name <acr-name>
 ```
 
-12. Push the image to the ACR:
+1.  Push the image to the ACR:
 ```
 docker push <acr-name>.azurecr.io/<image-name>:<tag>
 ```
 
-13. Create Application Insights:
+1.  Create Application Insights:
 ```
 az monitor log-analytics workspace create --resource-group <resource-group-name> --workspace-name <workspace-name>
 az extension add -n application-insights
 az monitor app-insights component create --app ta4hAdaptiveClient --location <location> --kind web --resource-group <resource-group-name>  --workspace "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/microsoft.operationalinsights/workspaces/<workspace-name>"
 ```
 
-14. Get the instrumentation key:
+1.  Get the instrumentation key:
 ```
 az monitor app-insights component show --app <app-name> --resource-group <resource-group-name> --query "instrumentationKey"
 ```
 
-15. Use the aci-template.yml file and replace all the {{}} with the values according to the resources you created:
+1.  Use the aci-template.yml file and replace all the <> with the values according to the resources you created:
 ```
-az deployment group create --resource-group <resource-group-name> --template-file aci-template.yml --parameters languageResourceName=<resource-name> languageResourceEndpoint=<billing-endpoint> languageResourceKey=<api-key> storageAccountName=<storage-account-name> storageAccountKey=<storage-account-key> containerRegistryName=<acr-name> containerRegistryUsername=<acr-username> containerRegistryPassword=<acr-password> containerImageName=<image-name> containerImageTag=<tag> containerGroupName=<container-group-name> containerGroupLocation=<location> appInsightsInstrumentationKey=<instrumentation-key> managedIdentityClientId=<managed-identity-client-id> managedIdentityResourceId=<managed-identity-resource-id>
+az container create --resource-group <resource-group-name> --file aci_deployment.yml
 ```
 
 
