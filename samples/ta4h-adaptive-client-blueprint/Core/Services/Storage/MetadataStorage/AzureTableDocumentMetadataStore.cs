@@ -3,7 +3,6 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 
@@ -56,9 +55,9 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 {
     private readonly TableClient _tableClient;
     private readonly ILogger _logger;
-    private const string PasswordAuthentication = "ConnectionString";
+    private const string ConnectionStringAuthentication = "ConnectionString";
     private const string AadAuthetication = "AAD";
-    private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication };
+    private static string[] ValidAuthenticationMethods = new[] { ConnectionStringAuthentication, AadAuthetication };
     private const string SpecialEntryName = "ta4hclientappisinitialized";
     private bool staleDocumentsChecked = false;
     private bool? tableAlreadyInitialized = null;
@@ -69,10 +68,17 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
         var settings = options.Value;
         var connectionString = settings.ConnectionString;
         var authenticationMethod = ValidAuthenticationMethods.Contains(settings.AuthenticationMethod) ? settings.AuthenticationMethod : throw new ConfigurationException("MetadataStorage:AzureTableSettings", settings.AuthenticationMethod, ValidAuthenticationMethods);
-        var credential = new DefaultAzureCredential();
-        var tableName = settings.TableName;
-        TableServiceClient serviceClient = new TableServiceClient(new Uri(connectionString), credential);
-        _tableClient = serviceClient.GetTableClient(tableName);
+        TableServiceClient serviceClient;
+        if (authenticationMethod == AadAuthetication)
+        {
+            var credential = new DefaultAzureCredential();
+            serviceClient = new TableServiceClient(new Uri(connectionString), credential);
+        }
+        else
+        {
+            serviceClient = new TableServiceClient(connectionString);
+        }
+        _tableClient = serviceClient.GetTableClient(settings.TableName);
         _logger = logger;
     }
     public async Task CreateIfNotExistAsync()
@@ -87,10 +93,10 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
             // If isPreInitialized == true it means that the metadata storage table has already been initialized before in a previous run of this app.
             // It might have crushed due to an error, was stopped manually or failed to complete for some other reason. It is possible that in the previous run some documents were
             // marked as scheduled or sent to processing but were not updated since. So we first look for these documents before we continue for documents in "NotStarted" Status.
-            List<DocumentMetadata> staleDocumetEntires = await GetStaleDocumentsEntries(batchSize);
-            if (staleDocumetEntires.Any())
+            List<DocumentMetadata> staleDocumetEntries = await GetStaleDocumentsEntriesAsync(batchSize);
+            if (staleDocumetEntries.Any())
             {
-                return staleDocumetEntires;
+                return staleDocumetEntries;
             }
             else
             {
@@ -98,9 +104,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
                 staleDocumentsChecked = true;
             }
         }
-        List<DocumentMetadata> entries = await GetDocumentsWithNotStartedStatus(batchSize);
-        return entries;
-
+        return await GetDocumentsWithNotStartedStatusAsync(batchSize);
     }
 
     /// <summary>
@@ -108,7 +112,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     /// </summary>
     /// <param name="batchSize"></param>
     /// <returns></returns>
-    private async Task<List<DocumentMetadata>> GetDocumentsWithNotStartedStatus(int batchSize)
+    private async Task<List<DocumentMetadata>> GetDocumentsWithNotStartedStatusAsync(int batchSize)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
         var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.PartitionKey == "NotStarted", maxPerPage: 500);
@@ -122,7 +126,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     /// Get a batch of DocumentMetadata entries that have been scheduled before but were not completed
     /// </summary>
     /// <param name="batchSize"></param>
-    private async Task<List<DocumentMetadata>> GetStaleDocumentsEntries(int batchSize)
+    private async Task<List<DocumentMetadata>> GetStaleDocumentsEntriesAsync(int batchSize)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
         var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(

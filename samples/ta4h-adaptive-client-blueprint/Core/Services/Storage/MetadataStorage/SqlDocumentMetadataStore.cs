@@ -26,7 +26,11 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     private const string PasswordAuthentication = "Password";
     private const string AadAuthetication = "AAD";
-    private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication }; 
+    private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication };
+
+    private bool staleDocumentsChecked = false;
+    private bool? tableAlreadyInitialized = null;
+
 
     public SqlDocumentMetadataStore(ILogger<SqlDocumentMetadataStore> logger, IOptions<SQLMetadataStorageSettings> options)
     {
@@ -76,8 +80,27 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
 
     public async Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int batchSize)
     {
-        var entries = new List<DocumentMetadata>();
+        if (tableAlreadyInitialized.Value && !staleDocumentsChecked)
+        {
+            // If isPreInitialized == true it means that the metadata storage table has already been initialized before in a previous run of this app.
+            // It might have crushed due to an error, was stopped manually or failed to complete for some other reason. It is possible that in the previous run some documents were
+            // marked as scheduled or sent to processing but were not updated since. So we first look for these documents before we continue for documents in "NotStarted" Status.
+            var staleDocumentsEntries = await GetStaleDocumentsEntriesAsync(batchSize);
+            if (staleDocumentsEntries.Any())
+            {
+                return staleDocumentsEntries;
+            }
+            else
+            {
+                // no more stale documents to load - continute to loading documents with Status "NotStarted"
+                staleDocumentsChecked = true;
+            }
+        }
+        return await GetDocumentsWithNotStartedStatusAsync(batchSize);
+    }
 
+    private async Task<IEnumerable<DocumentMetadata>> GetDocumentsWithNotStartedStatusAsync(int batchSize)
+    {
         using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
         WITH cte AS (
@@ -94,6 +117,7 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         command.Parameters.AddWithValue($"@{Status}", (int)ProcessingStatus.NotStarted);
         command.Parameters.AddWithValue("@NewStatus", (int)ProcessingStatus.Scheduled);
 
+        var entries = new List<DocumentMetadata>();
         using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
@@ -111,8 +135,41 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
         return entries;
     }
 
+    private async Task<IEnumerable<DocumentMetadata>> GetStaleDocumentsEntriesAsync(int batchSize)
+    {
+        using var connection = await GetOpenSqlConnectionAsync();
+        using var command = new SqlCommand($@"
+            SELECT TOP (@BatchSize) {DocumentId}, {InputPath}, {Status}, {LastModified}, {ResultsPath}, {JobId}
+            FROM {TableName}
+            WHERE (({Status} = @ScheduledStatus OR {Status} = @ProcessingStatus) AND {LastModified} <= DATEADD(MINUTE, -30, GETUTCDATE()))
+            ORDER BY {LastModified}", connection);
+
+        command.Parameters.AddWithValue("@BatchSize", batchSize);
+        command.Parameters.AddWithValue("@ScheduledStatus", (int)ProcessingStatus.Scheduled);
+        command.Parameters.AddWithValue("@ProcessingStatus", (int)ProcessingStatus.Processing);
+
+        var entries = new List<DocumentMetadata>();
+        using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            entries.Add(new DocumentMetadata
+            {
+                DocumentId = reader.GetString(0),
+                InputPath = reader.GetString(1),
+                Status = (ProcessingStatus)reader.GetInt32(2),
+                LastModified = reader.GetDateTime(3),
+                ResultsPath = reader.GetString(4),
+                JobId = reader.IsDBNull(5) ? null : reader.GetString(5)
+            });
+        }
+
+        return entries;
+    }
+
+
     public async Task UpdateEntryAsync(DocumentMetadata entry)
     {
+        entry.LastModified = DateTime.UtcNow;
         using var connection = await GetOpenSqlConnectionAsync();
         using var command = new SqlCommand($@"
             UPDATE {TableName} 
@@ -222,6 +279,8 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
             ResultsPath = "N/A"
         };
         await AddEntriesAsync(new[] { specialEntry });
+        tableAlreadyInitialized = false; // if we needed to mark as initialized it means it wasn't initialized before
+
     }
 
     public async Task AddEntriesAsync(IEnumerable<DocumentMetadata> entries)
@@ -248,6 +307,16 @@ public class SqlDocumentMetadataStore : IDocumentMetadataStore
     public async Task<bool> IsInitializedAsync()
     {
         var specialEntry = await GetDocumentMetadataAsync(InitializeDbEntryName);
-        return specialEntry != null;
+
+        if (specialEntry != null)
+        {
+            // the existance of the Special Entry means the table has been initialized before
+            tableAlreadyInitialized = true;
+        }
+        else
+        {
+            tableAlreadyInitialized = false;
+        }
+        return tableAlreadyInitialized.Value;
     }
 }
