@@ -61,8 +61,25 @@ public class DataHandler : IDataHandler
         IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> zipped = docsMetadata.Zip(docs, (metadata, doc) => (metadata, doc));
         _logger.LogInformation("{count} docs were read from storage", docs.Count());
         docsLoaded += docs.Count;
-        List<Ta4hInputPayload> payloads = ToTa4hInputPayloads(zipped);
-        _logger.LogInformation("{count} payloads were created", payloads.Count);
+
+        bool IsPartOfActiveJob(DocumentMetadata metadata)
+        {
+            // if document has already been assigned a job id it means it was already sent before to ta4h
+            // and for some reason the analysis results were not fetched. If less than 24 hours passed, it would be possible to
+            // retrieve the results from the api using the job id without needing to send the document for processing again.
+            return metadata.JobId != null && metadata.LastModified > DateTime.UtcNow - TimeSpan.FromHours(24);
+        }
+
+        var payloadsForNewJobs = ToTa4hInputPayloads(zipped.Where(pair => !IsPartOfActiveJob(pair.metadata)));
+        var payloadsForActiveJobs = zipped.Where(pair => IsPartOfActiveJob(pair.metadata))
+            .GroupBy(pair => pair.metadata.JobId)
+            .Select(g => new Ta4hInputPayload() 
+            {
+                Documents = g.Select(pair => pair.doc).ToList(),
+                DocumentsMetadata = g.Select(pair => pair.metadata).ToList(),
+            });
+        var payloads = payloadsForActiveJobs.Concat(payloadsForNewJobs).ToList();
+        _logger.LogInformation("Prepared next batch of {payloadCount} payloads for ta4h with {documentCount} documents.", payloads.Count, docs.Count);
         return payloads;
     }
 
@@ -185,12 +202,11 @@ public class DataHandler : IDataHandler
         return new TextDocumentInput(docId, text) { Language = language };
     }
 
-    private List<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> documents)
+    private IEnumerable<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> documents)
     {
         int maxCharactersPerRequest = _options.MaxCharactersPerRequest;
         int maxDocsPerRequest = _options.MaxDocsPerRequest;
         var random = new Random();
-        var payloads = new List<Ta4hInputPayload>();
 
         Ta4hInputPayload nextPayload = new();
 
@@ -198,7 +214,7 @@ public class DataHandler : IDataHandler
         {
             if (nextPayload.Documents.Count == maxDocsPerRequest || nextPayload.TotalCharLength + doc.Text.Length >= maxCharactersPerRequest)
             {
-                payloads.Add(nextPayload);
+                yield return nextPayload;
                 nextPayload = new();
                 nextPayload.Documents.Add(doc);
                 nextPayload.DocumentsMetadata.Add(metadata);
@@ -215,10 +231,8 @@ public class DataHandler : IDataHandler
         }
         if (nextPayload.Documents.Any())
         {
-            payloads.Add(nextPayload);
+            yield return nextPayload;
         }
-        _logger.LogInformation("Prepared next batch of {payloadCount} payloads for ta4h with {documentCount} documents.", payloads.Count, documents.Count());
-        return payloads;
     }
 
     public Task UpdateProcessingJobAsync(Ta4hInputPayload payload, string jobId)

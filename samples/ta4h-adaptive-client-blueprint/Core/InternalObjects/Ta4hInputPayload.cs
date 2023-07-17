@@ -15,5 +15,4 @@ public class Ta4hInputPayload
     
     public int TotalCharLength => Documents.Sum(d => d.Text.Length);
 
-
 }

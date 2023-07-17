@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Azure.Core;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net;
@@ -11,6 +12,7 @@ public class TextAnalytics4HealthClient
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly Ta4hOptions _options;
+    private readonly Random _jitterer = new Random(DateTime.Now.Millisecond);
 
     private const string ApiKeyHeaderName = "Ocp-Apim-Subscription-Key";
     private const string OperationLocationHeaderName = "Operation-Location";
@@ -24,7 +26,7 @@ public class TextAnalytics4HealthClient
         _logger = logger;
     }
 
-    public async Task<string> StartHealthcareAnalysisOperationAsync(Ta4hInputPayload payload)
+    public async Task<string> SendPayloadToProcessingAsync(Ta4hInputPayload payload)
     {
         var url = $"/language/analyze-text/jobs?api-version={_options.ApiVersion}";
 
@@ -84,9 +86,9 @@ public class TextAnalytics4HealthClient
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content?.ReadAsStringAsync();
-                    _logger.LogWarning("attempt number {attempt}, {uri}, Got an http excpetion, retry-after header = {RetryAfter}, {statusCode}, {err}", attemptsCounter + 1, request.RequestUri, response.Headers.RetryAfter, response.StatusCode, errorContent);
-                    _logger.LogWarning("Got an http excpetion, retry-after header = {RetryAfter}", response.Headers.RetryAfter);
-                    throw new HttpException(response.StatusCode, errorContent);
+                    _logger.LogError("attempt number {attempt}, {uri}, Got an http excpetion, retry-after header = {RetryAfter}, {statusCode}, {err}", attemptsCounter + 1, request.RequestUri, response.Headers.RetryAfter, response.StatusCode, errorContent);
+                    var retryAfter = response.Headers.RetryAfter?.Delta;
+                    throw new HttpException(response.StatusCode, errorContent, retryAfter);
                 }
                 return response;
             }
@@ -94,11 +96,10 @@ public class TextAnalytics4HealthClient
             {
                 attemptsCounter++;
                 lastException = httpException;
-                var jitterer = new Random(request.RequestUri.OriginalString.GetHashCode());
-                var tryAgainInSeconds = jitterer.Next(15, 30);
-                _logger.LogWarning("Request to {url} failed with http 429 status. next retry in {tryAgainInSeconds} seconds", request.RequestUri, tryAgainInSeconds);
-                await Task.Delay(TimeSpan.FromSeconds(tryAgainInSeconds));
-                _logger.LogInformation("Waited to retry for {tryAgainInSeconds}, ready to try again", tryAgainInSeconds);
+                var retryAfter = (httpException.RetryAfter ?? TimeSpan.FromSeconds(30)) * (1 + _jitterer.NextDouble());
+
+                _logger.LogWarning("Request to {url} failed with http 429 status. next retry in {tryAgainInSeconds} seconds", request.RequestUri, (int)retryAfter.TotalSeconds);
+                await Task.Delay(retryAfter);
             }
             catch (TaskCanceledException taskCancelledException) when (attemptsCounter < maxAttemps)
             {

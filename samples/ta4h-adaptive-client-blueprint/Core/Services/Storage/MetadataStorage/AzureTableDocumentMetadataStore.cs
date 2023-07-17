@@ -10,8 +10,8 @@ using System.Runtime.Serialization;
 public class DocumentMetadataTableEntity : DocumentMetadata, ITableEntity
 {
 
-    public string PartitionKey { get; set; } // We'll set this as Status in conversion
-    public string RowKey { get; set; } // We'll set this as DocumentId in conversion
+    public string PartitionKey { get; set; }
+    public string RowKey { get; set; }
 
     public DateTimeOffset? Timestamp { get; set; }
     public ETag ETag { get; set; }
@@ -60,7 +60,8 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
     private const string AadAuthetication = "AAD";
     private static string[] ValidAuthenticationMethods = new[] { PasswordAuthentication, AadAuthetication };
     private const string SpecialEntryName = "ta4hclientappisinitialized";
-
+    private bool staleDocumentsChecked = false;
+    private bool? tableAlreadyInitialized = null;
 
 
     public AzureTableDocumentMetadataStore(IOptions<AzureTableMetadataStorageSettings> options, ILogger<AzureTableDocumentMetadataStore> logger)
@@ -81,10 +82,62 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
 
     public async Task<IEnumerable<DocumentMetadata>> GetNextDocumentsForProcessAsync(int batchSize)
     {
+        if (tableAlreadyInitialized.Value && !staleDocumentsChecked)
+        {
+            // If isPreInitialized == true it means that the metadata storage table has already been initialized before in a previous run of this app.
+            // It might have crushed due to an error, was stopped manually or failed to complete for some other reason. It is possible that in the previous run some documents were
+            // marked as scheduled or sent to processing but were not updated since. So we first look for these documents before we continue for documents in "NotStarted" Status.
+            List<DocumentMetadata> staleDocumetEntires = await GetStaleDocumentsEntries(batchSize);
+            if (staleDocumetEntires.Any())
+            {
+                return staleDocumetEntires;
+            }
+            else
+            {
+                // no more stale documents to load - continute to loading documents with Status "NotStarted"
+                staleDocumentsChecked = true;
+            }
+        }
+        List<DocumentMetadata> entries = await GetDocumentsWithNotStartedStatus(batchSize);
+        return entries;
 
+    }
+
+    /// <summary>
+    /// Get a batch of DocumentMetadata entries for documents with Status "NotStarted"
+    /// </summary>
+    /// <param name="batchSize"></param>
+    /// <returns></returns>
+    private async Task<List<DocumentMetadata>> GetDocumentsWithNotStartedStatus(int batchSize)
+    {
         Stopwatch stopwatch = Stopwatch.StartNew();
-        var notStartedStatus = Enum.GetName(typeof(ProcessingStatus), ProcessingStatus.NotStarted);
         var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(filter: e => e.PartitionKey == "NotStarted", maxPerPage: 500);
+        var entries = await ProcessQueryResults(query, batchSize);
+        stopwatch.Stop();
+        _logger.LogInformation("Scheduled {count} documents for processing, took {ms} ms to read from metadata.", entries.Count, stopwatch.ElapsedMilliseconds);
+        return entries;
+    }
+
+    /// <summary>
+    /// Get a batch of DocumentMetadata entries that have been scheduled before but were not completed
+    /// </summary>
+    /// <param name="batchSize"></param>
+    private async Task<List<DocumentMetadata>> GetStaleDocumentsEntries(int batchSize)
+    {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        var query = _tableClient.QueryAsync<DocumentMetadataTableEntity>(
+            filter: e => e.PartitionKey == "Started" && 
+            (e.StatusString == "Scheduled" || e.StatusString == "Processing") && 
+            e.Timestamp < DateTimeOffset.UtcNow - TimeSpan.FromMinutes(60),
+            maxPerPage: 500);
+        var entries = await ProcessQueryResults(query, batchSize);
+        stopwatch.Stop();
+        _logger.LogInformation("Scheduled {count} documents for processing, took {ms} ms to read from metadata.", entries.Count, stopwatch.ElapsedMilliseconds);
+        return entries;
+    }
+
+    private async Task<List<DocumentMetadata>> ProcessQueryResults(AsyncPageable<DocumentMetadataTableEntity> query, int batchSize)
+    {
         var entries = new List<DocumentMetadata>();
         await foreach (var page in query.AsPages())
         {
@@ -92,12 +145,12 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
             List<TableTransactionAction> addActions = new List<TableTransactionAction>();
             List<TableTransactionAction> deleteActions = new List<TableTransactionAction>();
 
-            for (int i =0; i < batchEntitiesToUpdate.Count; i++)
+            for (int i = 0; i < batchEntitiesToUpdate.Count; i++)
             {
                 // because the partition key of "NotStarted" entries is different from entries with other Status, we cannot update the entry.
                 // We need instead to create a new one and delete the previous one.
                 var existingEntry = batchEntitiesToUpdate[i];
-                var newEntry =new DocumentMetadataTableEntity
+                var newEntry = new DocumentMetadataTableEntity
                 {
                     DocumentId = existingEntry.DocumentId,
                     RowKey = existingEntry.RowKey,
@@ -124,12 +177,8 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
                 break;
             }
         }
-        stopwatch.Stop();
-        _logger.LogInformation("Scheduled {count} documents for processing", entries.Count);
         return entries;
-
     }
-
 
     public Task UpdateEntryAsync(DocumentMetadata entry)
     {
@@ -161,6 +210,7 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
             LastModified = DateTime.UtcNow,
             Status = ProcessingStatus.Succeeded
         };
+        tableAlreadyInitialized = false; // if we needed to mark as initialized it means it wasn't initialized before
         await _tableClient.AddEntityAsync(specialEntry);
     }
 
@@ -180,10 +230,13 @@ public class AzureTableDocumentMetadataStore : IDocumentMetadataStore
         try
         {
             var _ = await _tableClient.GetEntityAsync<DocumentMetadataTableEntity>(SpecialEntryName, SpecialEntryName);
+            // the existance of the Special Entry means the table has been initialized before
+            tableAlreadyInitialized = true;
             return true;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
+            // this means the sepecial entity doesn't exist
             return false;
         }
     }

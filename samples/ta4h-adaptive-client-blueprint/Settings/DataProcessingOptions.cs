@@ -30,6 +30,11 @@
     /// </summary>
     public int Concurrency { get; set; } = 10;
 
+    /// <summary>
+    /// The max number of pending ta4h jobs we allow concurrently
+    /// </summary>
+    public int AbsoluteMaxPendingJobCount { get; set; } = 450;
+
 
 }
 

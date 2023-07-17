@@ -11,3 +11,4 @@
 /.vs/azure-health-AI-services-samples/v17
 /.vs/VSWorkspaceState.json
 *.sqlite
+/.vs

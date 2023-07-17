@@ -28,11 +28,11 @@ public class HealthcareAnalysisRunner
         _logger = logger;
         _dataHandler = dataHandler;
         _dataProcessingOptions = dataProcessingOptions.Value;
-        MaxAllowedPendingJobsSize = _dataProcessingOptions.InitialQueueSize;
+        MaxAllowedPendingJobsCount = _dataProcessingOptions.InitialQueueSize;
     }
 
 
-    public int MaxAllowedPendingJobsSize { get; private set; }
+    public int MaxAllowedPendingJobsCount { get; private set; }
 
     public async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -98,9 +98,9 @@ public class HealthcareAnalysisRunner
 
     private async Task WaitIfJobsQueueTooBigAsync()
     {
-        while (_jobsQueue.Count >= MaxAllowedPendingJobsSize)
+        while (_jobsQueue.Count >= MaxAllowedPendingJobsCount)
         {
-            _logger.LogDebug("jobsQueueCount={jobsQueueCount} >= MaxSize={MaxSize}. waiting for next cycle", _jobsQueue.Count, MaxAllowedPendingJobsSize);
+            _logger.LogDebug("jobsQueueCount={jobsQueueCount} >= MaxSize={MaxSize}. waiting for next cycle", _jobsQueue.Count, MaxAllowedPendingJobsCount);
             await Task.Delay(500);
         }
         return;
@@ -109,7 +109,8 @@ public class HealthcareAnalysisRunner
     private async Task SendPaylodForProcessing(Ta4hInputPayload payload)
     {
         await WaitIfJobsQueueTooBigAsync();
-        var jobId = await _textAnalyticsClient.StartHealthcareAnalysisOperationAsync(payload);
+        var jobId = payload.DocumentsMetadata.Select(d => d.JobId).Distinct().Single(); // we assume that all documents in payload have the same jobId or don't have a job Id at all
+        jobId ??= await _textAnalyticsClient.SendPayloadToProcessingAsync(payload);
         _jobsQueue.Enqueue(new QueueItem(payload, payload.TotalCharLength, DateTime.UtcNow, NextCheckDateTime: DateTime.UtcNow + GetEstimatedProcessingTime(payload.TotalCharLength), LastCheckedDateTime: DateTime.UtcNow));
         _logger.LogDebug("Job {jobId} started : Sent {docCount} docs for processing: {docs}", jobId, payload.Documents.Count, string.Join('|', payload.Documents.Select(d => d.Id).ToArray()));
         await _dataHandler.UpdateProcessingJobAsync(payload, jobId);
@@ -188,35 +189,37 @@ public class HealthcareAnalysisRunner
         lock (_lock)
         {
             _completedItems.Add(new(item, jobDuration));
-            if (_completedItems.Count == MaxAllowedPendingJobsSize)
+            if (_completedItems.Count == MaxAllowedPendingJobsCount)
             {
-                var estiamtedMeanWaitTime = EstimateMeanWaitTimeForBatch();
-                var currentMaxSize = MaxAllowedPendingJobsSize;
-                int newMaxSize;
-                if (estiamtedMeanWaitTime < TimeSpan.FromSeconds(60))
-                {
-                    newMaxSize = MaxAllowedPendingJobsSize * 2;
-                }
-                else
-                {
-                    newMaxSize = (int)(MaxAllowedPendingJobsSize * (TimeSpan.FromSeconds(90) / estiamtedMeanWaitTime));
-                }
-                if (newMaxSize > 300)
-                {
-                    newMaxSize = 300;
-                }
-                if (newMaxSize == 0)
-                {
-                    newMaxSize = 1;
-                }
-                MaxAllowedPendingJobsSize = newMaxSize;
-                _logger.LogInformation("estimatedMeanWaitTime: {estiamtedMeanWaitTime}, currentMaxSize: {currentMaxSize}, nextMaxSize: {MaxSize}", estiamtedMeanWaitTime, currentMaxSize, MaxAllowedPendingJobsSize);
+                AdjustMaxPendingJobsLimit();
                 _completedItems.Clear();
             }
         }
         await _dataHandler.StoreSuccessfulJobResultsAsync(item.Payload, response.Tasks.Items[0].Results);
     }
 
+    private void AdjustMaxPendingJobsLimit()
+    {
+        var estiamtedMeanWaitTime = EstimateMeanWaitTimeForBatch();
+        var currentMaxSize = MaxAllowedPendingJobsCount;
+        int newMaxSize;
+        if (estiamtedMeanWaitTime < TimeSpan.FromSeconds(60))
+        {
+            // as long as the estimated time a job waits before processing is less than 1 minute, we can increase the
+            // max size of pending jobs.
+            newMaxSize = MaxAllowedPendingJobsCount * 2;
+        }
+        else
+        {
+            // if the wait time is longer than 1 minute, we may decrease or increase the max size in a factor
+            // set according to the esitimates wait time.
+            newMaxSize = (int)(MaxAllowedPendingJobsCount * (TimeSpan.FromSeconds(90) / estiamtedMeanWaitTime));
+        }
+        var absoluteMax = _dataProcessingOptions.AbsoluteMaxPendingJobCount;
+        // on top of adapting MaxAllowedPendingJobsSize based on the time it takes, we want to limit the growth to try to reduce the risk of getting throttled by the API.
+        MaxAllowedPendingJobsCount = (newMaxSize > absoluteMax) ? absoluteMax : (newMaxSize == 0) ? 1 : newMaxSize;
+        _logger.LogInformation("estimatedMeanWaitTime: {estiamtedMeanWaitTime}, currentMaxSize: {currentMaxSize}, nextMaxSize: {MaxSize}", estiamtedMeanWaitTime, currentMaxSize, MaxAllowedPendingJobsCount);
+    }
 
     private TimeSpan EstimateMeanWaitTimeForBatch()
     {
@@ -235,6 +238,7 @@ public class HealthcareAnalysisRunner
 
     private TimeSpan GetEstimatedProcessingTime(int inputSize)
     {
+        // The backend throughput is appx. 1000 chars per second.
         return TimeSpan.FromMilliseconds(inputSize) + TimeSpan.FromSeconds(2);
     }
 
