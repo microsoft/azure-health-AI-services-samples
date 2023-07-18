@@ -199,7 +199,7 @@ public class DataHandler : IDataHandler
         var docId = documentMetadata.DocumentId;
         _logger.LogDebug("Read document {docId}", docId);
         var language = _options.Language;
-        return new TextDocumentInput(docId, text) { Language = language };
+        return new DocumentInput(docId, text, language);
     }
 
     private IEnumerable<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, DocumentInput doc)> documents)

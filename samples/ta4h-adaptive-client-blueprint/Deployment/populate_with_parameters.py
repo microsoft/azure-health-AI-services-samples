@@ -96,9 +96,9 @@ def process_launchsettings_json(template_file, parameters_file, profile):
 if __name__ == "__main__":
     # Define command-line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--template_file", required=True)
-    parser.add_argument("--parameters_file", default="deployment-params.json")
-    parser.add_argument("--output_file")
+    parser.add_argument("--template-file", required=True)
+    parser.add_argument("--parameters-file", default="deployment-params.json")
+    parser.add_argument("--output-file")
     parser.add_argument("--profile")
     args = parser.parse_args()
 
