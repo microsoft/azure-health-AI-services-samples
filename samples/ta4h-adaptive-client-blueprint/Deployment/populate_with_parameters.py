@@ -55,12 +55,15 @@ def process_aci_yaml(template_file, parameters_file, output_file):
     with open(output_file, 'w') as file:
         file.write(yaml_template)
 
-def process_launchsettings_json(template_file, parameters_file, output_file, profile):
+def process_launchsettings_json(template_file, parameters_file, profile):
     parameters = load_parameters(parameters_file)
 
     # Load JSON template
     with open(template_file, 'r') as file:
         json_template = json.load(file)
+
+    output_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Properties", "launchSettings.json")
+
 
     # Check if output file already exists, if not create an empty one
     if not os.path.exists(output_file):
@@ -80,7 +83,9 @@ def process_launchsettings_json(template_file, parameters_file, output_file, pro
             if isinstance(value, str):
                 # If the value is a string and contains a parameter, replace it
                 print(f"Replacing parameter in {profile_name} - {setting}")
-                settings[setting]["environmentVariables"] = replace_parameters_in_string(value, parameters)
+                value = replace_parameters_in_string(value, parameters)
+                settings["environmentVariables"][setting] = value
+
         # Update or add the profile in the existing launchsettings
         json_existing['profiles'][profile_name] = settings
 
@@ -91,16 +96,17 @@ def process_launchsettings_json(template_file, parameters_file, output_file, pro
 if __name__ == "__main__":
     # Define command-line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--template_file", default="aci_template.yaml")
+    parser.add_argument("--template_file", required=True)
     parser.add_argument("--parameters_file", default="deployment-params.json")
-    parser.add_argument("--output_file", required=True)
+    parser.add_argument("--output_file")
     parser.add_argument("--profile")
     args = parser.parse_args()
 
     # Check the file extension of the template file to determine its type
     if args.template_file.endswith('.yaml'):
         # Run the function for YAML files
-        process_aci_yaml(args.template_file, args.parameters_file, args.output_file)
+        output_file_name = args.output_file or "aci_feployment.yaml"
+        process_aci_yaml(args.template_file, args.parameters_file, output_file_name)
     elif args.template_file.endswith('.json'):
         # Run the function for JSON files
-        process_launchsettings_json(args.template_file, args.parameters_file, args.output_file, args.profile)
+        process_launchsettings_json(args.template_file, args.parameters_file, args.profile)

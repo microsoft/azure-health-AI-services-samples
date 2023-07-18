@@ -1,0 +1,17 @@
+{
+  "subscription-id": "",
+  "resource-group-name": "",
+  "identity-name": "",
+  "managed-identity-client-id": "",
+  "location": "",
+  "image-name": "",
+  "acr-name": "",
+  "image-tag": "",
+  "language-resource-name": "",
+  "language-resource-api-key": "",
+  "input-blob-container-name": "",
+  "output-blob-container-name": "",
+  "metadata-storage-table-name": "",
+  "appinsights-connection-string": "",
+  "storage-account-name": ""
+}

@@ -12,3 +12,4 @@
 /.vs/VSWorkspaceState.json
 *.sqlite
 /.vs
+/samples/ta4h-adaptive-client-blueprint/Deployment/aci_deployment.yaml

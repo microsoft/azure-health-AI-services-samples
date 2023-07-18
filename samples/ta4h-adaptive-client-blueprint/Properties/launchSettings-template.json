@@ -4,7 +4,7 @@
       "commandName": "Project",
       "environmentVariables": {
         "Ta4hOptions__ApiKey": "<language-resource-api-key>",
-        "Ta4hOptions__Endpoint": "https://<language-resource-name>.cognitiveservices.azure.com/",
+        "Ta4hOptions__Endpoint": "<language-resource-endpoint>",
         "InputStorage__StorageType": "FileSystem",
         "InputStorage__BasePath": "<input-txt-files-local-dir>",
         "OutputStorage__StorageType": "FileSystem",
