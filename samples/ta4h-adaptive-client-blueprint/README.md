@@ -142,11 +142,11 @@ docker push <acr-name>.azurecr.io/<image-name>:<tag>
 
 - Optional: Create Application Insights to store the application telemetry:
 
-``` az monitor log-analytics workspace create --resource-group <resource-group-name> --workspace-name <workspace-name> ```
-
-``` az extension add -n application-insights ``` 
-
-``` az monitor app-insights component create --app ta4hAdaptiveClient --location <location> --kind web --resource-group <resource-group-name>  --workspace "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/microsoft.operationalinsights/workspaces/<workspace-name>"``` 
+``` 
+az monitor log-analytics workspace create --resource-group <resource-group-name> --workspace-name <workspace-name> ```
+az extension add -n application-insights
+az monitor app-insights component create --app ta4hAdaptiveClient --location <location> --kind web --resource-group <resource-group-name>  --workspace "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/microsoft.operationalinsights/workspaces/<workspace-name>"
+``` 
 
 
 - Get the Application Insights Connection String and copy it to Deployment\deployment-params.json as appinsights-connection-string
