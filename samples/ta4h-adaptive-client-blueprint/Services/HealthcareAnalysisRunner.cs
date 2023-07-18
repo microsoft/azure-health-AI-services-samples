@@ -1,10 +1,8 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
-namespace TextAnalyticsHealthcareAdaptiveClient.Core.Services;
 
 public class HealthcareAnalysisRunner
 {

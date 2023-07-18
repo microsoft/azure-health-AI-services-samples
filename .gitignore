@@ -13,3 +13,4 @@
 *.sqlite
 /.vs
 /samples/ta4h-adaptive-client-blueprint/Deployment/aci_deployment.yaml
+/samples/ta4h-adaptive-client-blueprint/Deployment/params.json

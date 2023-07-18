@@ -1,4 +1,4 @@
-﻿using Azure.AI.TextAnalytics;
+﻿
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
@@ -35,7 +35,7 @@ public class DataHandler : IDataHandler
         }
         var docsMetadata = await _metadataStore.GetNextDocumentsForProcessAsync(_dataProcessingOptions.MaxBatchSize);
         _logger.LogInformation("start next batch - {count} docs for processing", docsMetadata.Count());
-        var docs = new List<TextDocumentInput>();
+        var docs = new List<DocumentInput>();
         try
         {
             docs.AddRange(await BatchProcessor.ProcessInBatchesAsync(
@@ -58,7 +58,7 @@ public class DataHandler : IDataHandler
                 }
             }
         }
-        IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> zipped = docsMetadata.Zip(docs, (metadata, doc) => (metadata, doc));
+        IEnumerable<(DocumentMetadata metadata, DocumentInput doc)> zipped = docsMetadata.Zip(docs, (metadata, doc) => (metadata, doc));
         _logger.LogInformation("{count} docs were read from storage", docs.Count());
         docsLoaded += docs.Count;
 
@@ -193,7 +193,7 @@ public class DataHandler : IDataHandler
     }
 
 
-    private async Task<TextDocumentInput> ReadDocumentFromStorage(DocumentMetadata documentMetadata)
+    private async Task<DocumentInput> ReadDocumentFromStorage(DocumentMetadata documentMetadata)
     {
         var text = await _inputFileStorage.ReadTextFileAsync(documentMetadata.InputPath);
         var docId = documentMetadata.DocumentId;
@@ -202,7 +202,7 @@ public class DataHandler : IDataHandler
         return new TextDocumentInput(docId, text) { Language = language };
     }
 
-    private IEnumerable<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, TextDocumentInput doc)> documents)
+    private IEnumerable<Ta4hInputPayload> ToTa4hInputPayloads(IEnumerable<(DocumentMetadata metadata, DocumentInput doc)> documents)
     {
         int maxCharactersPerRequest = _options.MaxCharactersPerRequest;
         int maxDocsPerRequest = _options.MaxDocsPerRequest;

@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net;
@@ -80,7 +79,7 @@ public class TextAnalytics4HealthClient
             {
                 if (attemptsCounter > 0)
                 {
-                    _logger.LogWarning("attempt number {attempt}, {uri}", attemptsCounter + 1, request.RequestUri);
+                    _logger.LogWarning("retrying call to {uri}: attempt number {attempt}, ", request.RequestUri, attemptsCounter + 1);
                 }
                 var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
@@ -104,12 +103,14 @@ public class TextAnalytics4HealthClient
             catch (TaskCanceledException taskCancelledException) when (attemptsCounter < maxAttemps)
             {
                 attemptsCounter++;
+                lastException = taskCancelledException;
                 var tryAgainInSeconds = 1;
                 _logger.LogWarning("Request to {url} failed with timeout: {message}. next retry in {tryAgainInSeconds}", request.RequestUri, taskCancelledException.Message, tryAgainInSeconds);
                 await Task.Delay(TimeSpan.FromSeconds(tryAgainInSeconds));
             }
             catch (Exception ex) 
             {
+                lastException = ex;
                 _logger.LogError(ex, "Unexpected error");
             }
             var newRequest = new HttpRequestMessage(request.Method, request.RequestUri)
