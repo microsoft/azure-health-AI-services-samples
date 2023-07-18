@@ -1,7 +1,7 @@
 ## Text Analytics for Health Adaptive Client for Processing Large Volumes of Data
 
 This sample provides code and setup instructions for processing large volumes of medical data using Text Analytics for Health.
-The TextAnlytics SDKs provide a convenient way to call the TextAnalytics API and work with the analysis results programatically.
+The TextAnalytics SDKs provide a convenient way to call the TextAnalytics API and work with the analysis results programmatically.
 However, when you have large volumes of data that you want to process using TextAnalytics for Health and store the results,
 it is important to have a solution that is optimized for efficiency and throughput. This sample aims to do exactly that.
 It tries to minimize the overall time for processing a large number of documents given the capacity of the servers at any given moment (whether you use the hosted API or a self-hosted solution) and the service limits (i.e. max allowed API calls per minute).
@@ -10,10 +10,10 @@ It tries to minimize the overall time for processing a large number of documents
 ### Solution Architecture
 This solution is composed of several components:
 -  **Input Storage** - this is where text documents are stored. This could be a local file system storage, a mounted volume, an azure blob storage or any other implementation of the IFileStorage interface.
- The default implmentation assumes that every .txt file under the input storage location should be processed by TA4H.
+ The default implementation assumes that every .txt file under the input storage location should be processed by TA4H.
 -  **Output Storage** - this is where the results of TA4H analysis will be stored as json files. Like the input storage is can have different implementations.
 -  **Metadata Storage** - this is where the metadata about each documents is stored (like its status, e.g. not started, processing, completed etc.). Could be an Azure table storage, a SQL database or in-memory implementation.
--  **Text Analytics for Health Endpoint** - where the request will be sent to. This could be a hosted entpoint or and onprem
+-  **Text Analytics for Health Endpoint** - where the request will be sent to. This could be the hosted API endpoint or an on-prem container.
 -  **Client Application** - A dotnet 6 Console Application that reads the documents from the Input storage, sends them to processing and stores the results once they're ready.
 
 
@@ -23,15 +23,15 @@ This solution is composed of several components:
 - While there are still documents to be processed:
   - load a batch of text documents
   - group the documents into "payloads" of multiple documents (the Text Analytics API can handle up to 25 documents in one request) to maximize the throughput
-  - send each payload to the Text Analytics for Health Endpoint for processing. Note: the TA4H API is based on an asynchronous flow, so these calls do not return the rpocessing results, but instead return a job id that can can be used to poll the API for the job status and get the analysis results when they are ready.
+  - send each payload to the Text Analytics for Health Endpoint for processing. Note: the TA4H API is based on an asynchronous flow, so these calls do not return the reprocessing results, but instead return a job id that can can be used to poll the API for the job status and get the analysis results when they are ready.
 - On a different thread, poll the API for the jobs that have been created and not completed yet.
   - When a job is done, store the results in the Output Storage and update the Metadata Storage with its status.
-- Continously monitor the pending jobs and the average time to completion, to adapt the number of concurrent jobs. This adaptivity is important because it allows to utilize the maximun capacity of the server without overloading it.
+- Continuously monitor the pending jobs and the average time to completion, to adapt the number of concurrent jobs. This adaptivity is important because it allows to utilize the maximum capacity of the server without overloading it.
 - When all documents are processed and all jobs completed, exit the app.
 
 ### Run as local console application
 It is possible to run the application locally with no need to create any resources in Azure (except for the Language Resource itself).
-This is reccomended in case of smaller datasets that you can complete processesing within a few hours or less.
+This is recommended in case of smaller datasets that you can complete processing within a few hours or less.
 *requirements*:
 dotnet 6 runtime
 Visual Studio (optional)
@@ -44,7 +44,7 @@ Visual Studio (optional)
    - api key and endpoint of your azure language resource. Note that if you are using Text Analytics for Health Container and not the hosted API, you need to specify the url of the container / cluster you are running it and not the language resource billing endpoint.
    - paths to local directories for input (text documents) and output (json results).
 5. You can now build, run and debug the application in Visual Studio.
-6. Alernatively you can run the application from command line using:
+6. Alternatively you can run the application from command line using:
  ```
 dotnet run --launch-profile Ta4hAdaptiveClient-Local
 ```
@@ -69,7 +69,7 @@ As you go throgh the steps, copy the values for the parameters that appear in \<
 
 ###### 1. Prerequisites
 
-- Set the azure subscription you are going to create all the reosurce in (if you hav emore than one)
+- Set the azure subscription you are going to create all the resource in (if you have more than one)
 ```
 az account set --subscription <subscription-id>
 ```
@@ -180,10 +180,10 @@ docker push <acr-name>.azurecr.io/<image-name>:<tag>
 - Under the \Deployment folder, copy the aci_template.yaml file into a new file called aci_deployment.
 find and replace all the parts in square brackets with the values you stored in deployment-params.json. You can do it manually, or automatically by running the utility python script
 ```
-python -m populate_with_parameters --template-file aci_temlate.yaml
+python -m populate_with_parameters --template-file aci_template.yaml
 ```
 
-- Validate that all parameterized parts of the aci_temlate.yaml are populated correctly. Then, create the Azure Container Instance to run the application. 
+- Validate that all parameterized parts of the aci_template.yaml are populated correctly. Then, create the Azure Container Instance to run the application. 
 
 ```
 az container create --resource-group <resource-group-name> --file aci_deployment.yml
