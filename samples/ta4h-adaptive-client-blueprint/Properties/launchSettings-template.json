@@ -6,9 +6,9 @@
         "Ta4hOptions__ApiKey": "<language-resource-api-key>",
         "Ta4hOptions__Endpoint": "<language-resource-endpoint>",
         "InputStorage__StorageType": "FileSystem",
-        "InputStorage__BasePath": "<input-txt-files-local-dir>",
+        "InputStorage__FileSystemSettings__BasePath": "<input-txt-files-local-dir>",
         "OutputStorage__StorageType": "FileSystem",
-        "OutputStorage__BasePath": "<output-json-files-local-dir>",
+        "OutputStorage__FileSystemSettings__BasePath": "<output-json-files-local-dir>",
         "MetadataStorage__StorageType": "InMemory"
       }
     },
