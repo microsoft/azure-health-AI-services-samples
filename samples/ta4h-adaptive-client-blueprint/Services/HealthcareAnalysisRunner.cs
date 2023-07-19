@@ -45,18 +45,18 @@ public class HealthcareAnalysisRunner
     {
         while (true)
         {
-            var paylods = await _dataHandler.LoadNextBatchOfPayloadsAsync();
-            if (!paylods.Any())
+            var payloads = await _dataHandler.LoadNextBatchOfPayloadsAsync();
+            if (!payloads.Any())
             {
                 _logger.LogInformation("No more payloads to send for processing, waiting for the jobs queue to complete");
                 _datasetCompleted = true;
                 break;
             }
-            int size = paylods.Count;
+            int size = payloads.Count;
             var tasks = new List<Task>();
             for (int i = 0; i < size; i++)
             {
-                var payload = paylods[i];
+                var payload = payloads[i];
                 tasks.Add(SendPaylodForProcessing(payload));
                 if (tasks.Count == _dataProcessingOptions.Concurrency || i == size - 1)
                 {

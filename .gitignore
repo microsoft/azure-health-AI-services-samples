@@ -14,3 +14,7 @@
 /.vs
 /samples/ta4h-adaptive-client-blueprint/Deployment/aci_deployment.yaml
 /samples/ta4h-adaptive-client-blueprint/Deployment/params.json
+.vscode/extensions.json
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json

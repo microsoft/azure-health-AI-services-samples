@@ -45,16 +45,16 @@ class Program
         })
         .ConfigureServices((hostContext, services) =>
         {
-            var configuraiton = hostContext.Configuration;
+            var configuration = hostContext.Configuration;
             //services.AddLogging(loggingBuilder => loggingBuilder.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>("Category", LogLevel.Information));
             //services.AddApplicationInsightsTelemetryWorkerService((ApplicationInsightsServiceOptions options) => options.ConnectionString = "InstrumentationKey=04b66dea-9f21-4aec-a7a0-1a2cff33b4a3");
 
             // Bind the configuration section to your options class
             services
-            .Configure<Ta4hOptions>(configuraiton.GetSection("Ta4hOptions"))
-            .Configure<DataProcessingOptions>(configuraiton.GetSection("DataProcessingOptions"))
-            .AddFileStorage(configuraiton)
-            .AddMetadataStorage(configuraiton)
+            .Configure<Ta4hOptions>(configuration.GetSection("Ta4hOptions"))
+            .Configure<DataProcessingOptions>(configuration.GetSection("DataProcessingOptions"))
+            .AddFileStorage(configuration)
+            .AddMetadataStorage(configuration)
             .AddSingleton<IDataHandler, DataHandler>()
             .AddSingleton<TextAnalytics4HealthClient>()
             .AddSingleton<HealthcareAnalysisRunner>();

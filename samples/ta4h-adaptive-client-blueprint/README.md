@@ -38,12 +38,17 @@ To run as a local console application, follow these steps:
 
 1. Clone the repository from GitHub: https://github.com/Microsoft/azure-health-ai-services-samples
 2. Navigate to the `samples/ta4h-adaptive-client-blueprint` directory.
-3. Create a `launchSetting.json` file under the 'Properties' directory and copy the "Ta4hAdaptiveClient-Local" profile definition from the `launchSetting-template.json`.
+3. Create a `launchSetting.json` file under the 'Properties' directory and copy the "Ta4hAdaptiveClient-Local" profile definition from the `launchSetting-template.json`. (Make sure to set `Copy to Output Directory` to Copy Always/Copy if Newer )
+
+The launchsetting should look like this 
+!["A screenshot of laynchsetting file"](/media/ta4h-adaptive-client-blueprint/launchsetting-example.png)
+
 4. Populate the missing values:
    - API key and endpoint of your Azure language resource. Note that if you are using Text Analytics for Health Container and not the hosted API, you need to specify the URL of the container/cluster you are running it on and not the language resource billing endpoint.
    - Paths to local directories for input (text documents) and output (JSON results).
-5. You can now build, run, and debug the application in Visual Studio.
-6. Alternatively, you can run the application from the command line using:
+5. If you are using the FileSystemSettings and have set a BasePath for the input storage, make sure you have added examples txt files. We have added some synthetic [test-data](./test-data/) for you to use.
+6. You can now build, run, and debug the application in Visual Studio.
+7. Alternatively, you can run the application from the command line using:
  ```
 dotnet run --launch-profile Ta4hAdaptiveClient-Local
 ```
