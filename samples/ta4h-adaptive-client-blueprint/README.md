@@ -92,10 +92,9 @@ az cognitiveservices account create --name <language-resource-name> --resource-g
 az storage account create --name <storage-account-name> --resource-group <resource-group-name> --sku Standard_LRS
 ```
 
-- Load the input data into blob storage:
+- Create the input container:
 ```
 az storage container create --name <input-blob-container-name> --account-name <storage-account-name> --auth-mode login
-az storage blob upload-batch --destination <input-blob-container-name> --source <input-txt-files-local-dir> --account-name <storage-account-name> --auth-mode login
 ```
 
 ###### 3. Container Registry
@@ -128,6 +127,12 @@ az role assignment create --role "Storage Blob Data Contributor" --assignee <you
 az role assignment create --role "Storage Table Data Contributor" --assignee <your-azure-identity-email> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 ```
 
+
+- If you have enabled the role assignment you can Load the input data into blob storage:
+```
+az storage blob upload-batch --destination <input-blob-container-name> --source <input-txt-files-local-dir> --account-name <storage-account-name> --auth-mode login
+```
+
 - Add read permissions to the managed identity to pull from the ACR, enabling the Azure Container Instance to pull the image without using user-password login:
 ```
 az role assignment create --role "AcrPull" --assignee <managed-identity-client-id> --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.ContainerRegistry/registries/<acr-name>
@@ -152,7 +157,7 @@ az monitor app-insights component show --app <app-name> --resource-group <resour
 
 - Build the application using the Dockerfile. Navigate to the root directory of the project and run:
 ```
-docker build -t <acr-name>.azurecr.io/<image-name>:<tag> .
+docker build . -t <acr-name>.azurecr.io/<image-name>:<tag> 
 ```
 
 - Log in to the ACR:
