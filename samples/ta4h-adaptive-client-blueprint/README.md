@@ -6,7 +6,7 @@ This sample provides code and setup instructions for processing large volumes of
 
 The solution comprises several components:
 
--  **Input Storage**: Stores text documents. This could be a local file system storage, a mounted volume, an Azure blob storage, or any other implementation of the IFileStorage interface. The default implementation assumes that every .txt file under the input storage location should be processed by TA4H.
+-  **Input Storage**: Stores text documents. This could be a local file system storage, a mounted volume, an Azure blob storage, or any other implementation of the [IFileStorage](Services/Storage/DocumentStorage/IFileStorage.cs) interface. The default implementation assumes that every .txt file under the input storage location should be processed by TA4H.
 
 -  **Output Storage**: Stores the results of TA4H analysis as JSON files. Like input storage, it can have different implementations.
 
@@ -38,9 +38,9 @@ To run as a local console application, follow these steps:
 
 1. Clone the repository from GitHub: https://github.com/Microsoft/azure-health-ai-services-samples
 2. Navigate to the `samples/ta4h-adaptive-client-blueprint` directory.
-3. Create a `launchSetting.json` file under the 'Properties' directory and copy the "Ta4hAdaptiveClient-Local" profile definition from the `launchSetting-template.json`. (Make sure to set `Copy to Output Directory` to Copy Always/Copy if Newer )
+3. Create a `launchSettings.json` file under the 'Properties' directory and copy the "Ta4hAdaptiveClient-Local" profile definition from  [launchSettings-template.json](Properties/launchSettings-template.json). (If using VisualStudio, Make sure to set `Copy to Output Directory` to Copy Always/Copy if Newer )
 
-The launchsetting should look like this 
+The launchSettings should look like this 
 !["A screenshot of laynchsetting file"](/media/ta4h-adaptive-client-blueprint/launchsetting-example.png)
 
 4. Populate the missing values:
