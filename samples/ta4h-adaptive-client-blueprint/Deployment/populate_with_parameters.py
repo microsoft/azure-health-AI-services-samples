@@ -5,12 +5,14 @@ import os
 
 def load_parameters(parameters_file):
     # Load parameters from JSON file
+    optional_params = ["appinsights-connection-string"]
+
     with open(parameters_file, 'r') as file:
         parameters = json.load(file)
 
     # Check if all parameters have a value
     for param, value in parameters.items():
-        if value == "":
+        if value == "" and param not in optional_params:
             raise ValueError(f"Value for parameter '{param}' is missing")
     
     return parameters
@@ -18,7 +20,6 @@ def load_parameters(parameters_file):
 def replace_parameters_in_string(s, parameters):
     # Find all parameters in the string
     string_params = re.findall(r'<(.*?)>', s)
-    print(s)
 
     # Check if all parameters in the string have a corresponding value
     for param in string_params:
@@ -27,7 +28,6 @@ def replace_parameters_in_string(s, parameters):
 
     # Replace parameters in the string
     for param in string_params:
-        print(param)
         value = parameters[param]
         print(f"Replacing parameter '{param} with value '{value}'")
         s = re.sub(f'<{param}>', value, s)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     # Check the file extension of the template file to determine its type
     if args.template_file.endswith('.yaml'):
         # Run the function for YAML files
-        output_file_name = args.output_file or "aci_feployment.yaml"
+        output_file_name = args.output_file or "aci_deployment.yaml"
         process_aci_yaml(args.template_file, args.parameters_file, output_file_name)
     elif args.template_file.endswith('.json'):
         # Run the function for JSON files
