@@ -1,0 +1,13 @@
+HISTORY OF PRESENT ILLNESS: The patient is a 55-year-old male with a past medical history of hypertension and hyperlipidemia. The patient reports that he woke up this morning with weakness and numbness in the right side of the body. He denies any headache, visual disturbance, or seizures. The patient denies any history of heart disease, diabetes, or stroke. He has never smoked or consumed alcohol. Upon arrival at the emergency department, the patient had a blood pressure of 164/90 mmHg, pulse of 98 beats per minute, and a respiratory rate of 16 breaths per minute. CT scan of the brain revealed a small infarct in the left middle cerebral artery territory. The patient was started on aspirin and admitted to the stroke unit for further management.
+
+PAST MEDICAL HISTORY: Hypertension, hyperlipidemia
+
+SOCIAL HISTORY: The patient is married and works as an accountant. He denies any use of tobacco, alcohol, or illicit drugs. He has no significant travel history.
+
+REVIEW OF SYSTEMS: No headache, visual disturbance, or seizures. No chest pain or shortness of breath. No abdominal pain, nausea, or vomiting. No history of endocrine problems.
+
+PHYSICAL EXAMINATION: Blood pressure 156/86 mmHg, pulse 92 beats per minute, respiratory rate 16 breaths per minute, temperature 36.8°C. The patient is alert and oriented to person, place, and time. Cranial nerves II-XII are intact. No facial droop or asymmetry noted. Motor strength 4/5 in the right upper and lower extremities. Sensation to light touch is decreased in the right upper and lower extremities. Reflexes are decreased in the right upper and lower extremities. No dysarthria or aphasia.
+
+LABORATORY WORK: CBC and electrolytes were within normal limits. Lipid panel revealed elevated LDL cholesterol.
+
+IMPRESSION AND PLAN: The patient is a 55-year-old male with a history of hypertension and hyperlipidemia who presented with acute onset of weakness and numbness in the right side of the body. CT scan of the brain revealed a small infarct in the left middle cerebral artery territory. The patient was started on aspirin and admitted to the stroke unit for further management. Blood pressure control and lipid management will be optimized. The patient will undergo further evaluation for stroke etiology.```

@@ -1,0 +1,14 @@
+
+HISTORY OF PRESENT ILLNESS: The patient is a 68-year-old female with a history of hypertension, type 2 diabetes mellitus, and chronic kidney disease stage 3. She was referred to our service after her primary care physician noticed a decline in her renal function. The patient denies any recent fevers, chills, hematuria, dysuria, flank pain, or urinary tract infections. She reports no history of renal stones or surgeries. She has been taking lisinopril for hypertension and metformin for diabetes.
+
+PAST MEDICAL HISTORY: Hypertension, type 2 diabetes mellitus, and chronic kidney disease stage 3.
+
+SOCIAL HISTORY: She is married and lives with her husband. She is a retired nurse. She denies tobacco, alcohol, or drug use.
+
+REVIEW OF SYSTEMS: The patient reports no chest pain, shortness of breath, cough, abdominal pain, nausea, vomiting, diarrhea, constipation, joint pain, or rash.
+
+PHYSICAL EXAMINATION: Blood pressure 128/72, pulse 80. General appearance is consistent with stated age, alert, and oriented. Head, eyes, ears, nose, and throat are normal. Neck is supple. Lungs are clear to auscultation bilaterally. Heart is regular without murmurs, rubs, or gallops. Abdomen is soft, non-tender, non-distended, and bowel sounds are present. No hepatosplenomegaly. No peripheral edema. No rash, joint swelling, or deformities. Neurologically intact.
+
+LABORATORY WORK: Creatinine 1.8 mg/dL, estimated glomerular filtration rate (eGFR) 40 mL/min/1.73m², blood urea nitrogen (BUN) 30 mg/dL. Hemoglobin 11.0 g/dL, white blood count 7.8 × 10³/µL, platelets 245 × 10³/µL. Calcium 9.3 mg/dL, phosphate 3.5 mg/dL.
+
+IMPRESSION AND PLAN: Chronic kidney disease stage 3. The patient will undergo a renal ultrasound to assess for structural abnormalities and a referral for nephrology consultation. She will continue lisinopril for blood pressure control and metformin for diabetes management. She will receive counseling on dietary modifications and importance of blood pressure and blood sugar control in slowing the progression of kidney disease.```

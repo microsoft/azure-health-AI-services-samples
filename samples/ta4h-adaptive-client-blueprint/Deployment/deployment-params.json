@@ -1,0 +1,17 @@
+{
+  "acr-name": "",
+  "appinsights-connection-string": "",
+  "identity-name": "",
+  "image-name": "",
+  "image-tag": "",
+  "input-blob-container-name": "",
+  "language-resource-api-key": "",
+  "language-resource-name": "",
+  "location": "",
+  "managed-identity-client-id": "",
+  "metadata-storage-table-name": "",
+  "output-blob-container-name": "",
+  "resource-group-name": "",
+  "storage-account-name": "",
+  "subscription-id": ""
+}
