@@ -3,7 +3,8 @@
 This sample provides code examples and best practices on how to use the containerized version of Text Analytics for Health in a scalable way.
 
 After completing the setup steps for this sample you will have: 
-- A .Net Core console application to help you stress test the service.
+- A simple .Net Core console application to help you stress test the service.
+    For a more stable and long-running client application please use our [Adaptive Client Sample](/samples/ta4h-adaptive-client-blueprint/README.md). 
 - A Kubernetes cluster that with several Text Analytics for Health Containers.
 - Azure Storage service with containers, Queues and Azure Table Storage. 
 

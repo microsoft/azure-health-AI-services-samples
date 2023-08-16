@@ -2,6 +2,8 @@
 
 This samples uses a [.Net Core Console Application](/samples/ta4h-container-e2e-sample/StressTestConsoleClient/) that can send one or more documents to the Azure Kubernetes Cluster. The .Net Core Client Console Application sends all the documents, in an async way to the cluster. The Text Analytics for Health containers  will process the documents in an asynchronous way and If all the containers are seeded, all new documents will be added to the Queue.
 
+We recommended to not use this client application for long-running jobs, for a more stable and long-running client application please use our [Adaptive Client Sample.](/samples/ta4h-adaptive-client-blueprint/README.md). 
+
 The high level client architecture can be seen below:
 
 !["Diagram of the client sample setup"](../../media/text-analytics-for-health-batch-async/client-architecture.png)
