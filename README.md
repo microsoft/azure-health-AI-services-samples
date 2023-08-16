@@ -49,7 +49,7 @@ This can be setup through a guided tutorial with several deployment scripts. Wit
 
 ## 3. Text Analytics for Health Adaptive Client Application [TA4H - ACI - C#]
 
-This sample provides code and setup instructions for processing large volumes of medical data using Text Analytics for Health (TA4H). While the TextAnalytics SDKs offer a convenient way to call the TextAnalytics API and work with the analysis results programmatically, processing large volumes of data requires a solution optimized for efficiency and throughput. This sample is designed to minimize overall processing time for a large number of documents, considering server capacity and service limits (i.e., max allowed API calls per minute). The client can work with 
+This sample provides code and setup instructions for processing large volumes of medical data using Text Analytics for Health (TA4H). While the TextAnalytics SDKs offer a convenient way to call the TextAnalytics API and work with the analysis results programmatically, processing large volumes of data requires a solution optimized for efficiency and throughput. This sample is designed to minimize overall processing time for a large number of documents, considering server capacity and service limits (i.e., max allowed API calls per minute). This client application can work with the Managed Azure Hosted service and the Containerized setup of Text Analytics for Health.
 
 [I want to try this sample](/samples/ta4h-adaptive-client-blueprint/README.md)
 
