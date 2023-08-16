@@ -5,12 +5,14 @@ import os
 
 def load_parameters(parameters_file):
     # Load parameters from JSON file
+    optional_params = ["appinsights-connection-string"]
+
     with open(parameters_file, 'r') as file:
         parameters = json.load(file)
 
     # Check if all parameters have a value
     for param, value in parameters.items():
-        if value == "":
+        if value == "" and param not in optional_params:
             raise ValueError(f"Value for parameter '{param}' is missing")
     
     return parameters
@@ -18,7 +20,6 @@ def load_parameters(parameters_file):
 def replace_parameters_in_string(s, parameters):
     # Find all parameters in the string
     string_params = re.findall(r'<(.*?)>', s)
-    print(s)
 
     # Check if all parameters in the string have a corresponding value
     for param in string_params:
@@ -27,7 +28,6 @@ def replace_parameters_in_string(s, parameters):
 
     # Replace parameters in the string
     for param in string_params:
-        print(param)
         value = parameters[param]
         print(f"Replacing parameter '{param} with value '{value}'")
         s = re.sub(f'<{param}>', value, s)
