@@ -27,17 +27,18 @@ The Intelligent Dashboard is designed to help healthcare professionals and organ
 
 This sample provides code examples and best practices on how to use the containerized version of Text Analytics for Health in a scalable way.
 After completing the tutorial you will have: 
-- A .Net Core console application to help you stress test the service.
 - A Kubernetes cluster that can scale with one or many Text Analytics for Health Nodes.
 - Several supporting services such as storage accounts, Queues, ... 
 
-All these examples can be setup through a guided tutorial with several deployment scripts. With the goal to be used in an scalable and asynchronous way. 
+This can be setup through a guided tutorial with several deployment scripts. With the goal to be used in an scalable and asynchronous way. 
 
 !["A screenshot of the Intelligent Dashboard PowerApp - PowerBI screen"](/media/text-analytics-for-health-batch-async/architecture.jpg)
 
 [I want to try this sample](/samples/ta4h-container-e2e-sample/README.md)
 
-## 3. Day in the life of a Nurse. [TA4H - PowerApps - Nuance - FHIR]
+## 3. Text Analytics for Health Container Adaptive Client  Application
+
+## 4. Day in the life of a Nurse. [TA4H - PowerApps - Nuance - FHIR]
 
 This repository contains several open-source example [Power Apps](https://make.powerapps.com/) which were created based on a study called 'The Day in the Life of a Nurse'. One of the outcomes were several minimal viable products that could support nurses in their daily job. These starter Power Apps solutions are enhanced with [Nuance Speech to Text](https://www.nuancehealthcaredeveloper.com/?q=Dragon-Medical-SpeechKit-Home), and utilize [Text Analytics for Health](https://docs.microsoft.com/en-us/azure/cognitive-services/language-service/text-analytics-for-health/overview ) for medical structuring. The data is being served from [FHIR API](https://docs.microsoft.com/en-us/azure/healthcare-apis/healthcare-apis-overview) and utilize the [FHIRBase](https://docs.microsoft.com/en-us/connectors/fhirbase/) and [FHIRClinical](https://docs.microsoft.com/en-us/connectors/fhirclinical/) Power Platform connectors. The application can also be linked to [Microsoft Shifts](https://support.microsoft.com/en-us/office/get-started-in-shifts-5f3e30d8-1821-4904-be26-c3cd25a497d6) where you can get real-time shift info from your colleagues.
 

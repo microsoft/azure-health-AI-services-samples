@@ -105,7 +105,7 @@ if __name__ == "__main__":
     # Check the file extension of the template file to determine its type
     if args.template_file.endswith('.yaml'):
         # Run the function for YAML files
-        output_file_name = args.output_file or "aci_feployment.yaml"
+        output_file_name = args.output_file or "aci_deployment.yaml"
         process_aci_yaml(args.template_file, args.parameters_file, output_file_name)
     elif args.template_file.endswith('.json'):
         # Run the function for JSON files

@@ -97,6 +97,11 @@ az storage account create --name <storage-account-name> --resource-group <resour
 az storage container create --name <input-blob-container-name> --account-name <storage-account-name> --auth-mode login
 ```
 
+- Create the output container:
+```
+az storage container create --name <input-blob-container-name> --account-name <storage-account-name> --auth-mode login
+```
+
 ###### 3. Container Registry
 
 - Create an Azure Container Registry (ACR) to host the application Docker image:
@@ -171,6 +176,8 @@ docker push <acr-name>.azurecr.io/<image-name>:<tag>
 ```
 
 ###### 7. Azure Container Instance
+- Fill in all the required parameters that from previous steps in the deployment-params.json file. You can find this under Deployments.
+The metadata-storage-table-name name is needed to auto generate the Azure Table Storage. 
 
 - Under the \Deployment folder, copy the aci_template.yaml file into a new file called aci_deployment. Find and replace all the parts in square brackets with the values you stored in deployment-params.json. You can do this manually or automatically by running the utility Python script:
 ```
