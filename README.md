@@ -87,7 +87,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 ## Disclaimers
 
-The Health-AI Samples is an open-source project. It is not a managed service, and it is not part of the Health-AI Services. The sample apps and sample code provided in this repo are used as examples only. You bear sole responsibility for compliance with local law and for any data you use when using these samples. Please review the information and licensing terms on this GitHub website before using the Health-AI Services Samples repo. 
+The Health-AI Samples is an open-source project. It is not a managed service, and it is not part of the Health-AI Services. The sample apps and sample code provided in this repo are used as examples only. You bear sole responsibility for compliance with applicable law and for any data you use when using these samples. Please review the information and licensing terms on this GitHub website before using the Health-AI Services Samples repo. 
 
 The Azure Health-AI Samples Github repo is intended only for use in transferring and formatting data. It is not intended for use as a medical device or to perform any analysis or any medical function and the performance of the software for such purposes has not been established. You bear sole responsibility for any use of this software, including incorporation into any product intended for a medical purpose. 
 
