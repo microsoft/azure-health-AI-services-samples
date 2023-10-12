@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
@@ -19,15 +20,18 @@ public class TextAnalytics4HealthClient
     public TextAnalytics4HealthClient(ILogger<TextAnalytics4HealthClient> logger, IOptions<Ta4hOptions> options)
     {
         _options = options.Value;
-        _httpClient = new HttpClient();
-        _httpClient.BaseAddress = new Uri(_options.Endpoint);
+        var certificate = new X509Certificate2("C:\\Users\\udnaveh\\OneDrive - Microsoft\\certificates\\cluster certificates\\aicp-global-dev-ApimClientCertificate-20230618.pfx", "");
+        var handler = new HttpClientHandler();
+        handler.ClientCertificates.Add(certificate);
+        _httpClient = new HttpClient(handler);
+        _httpClient.BaseAddress = new Uri("https://ta-hc.use.dev.api.cog.trafficmanager.net/");
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
         _logger = logger;
     }
 
     public async Task<string> SendPayloadToProcessingAsync(Ta4hInputPayload payload)
     {
-        var url = $"/language/analyze-text/jobs?api-version={_options.ApiVersion}";
+        var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs?api-version={_options.ApiVersion}";
 
         var requestBody = new
         {
@@ -51,6 +55,7 @@ public class TextAnalytics4HealthClient
             Content = new StringContent(serializedRequestBody, Encoding.UTF8, "application/json")
         };
         request.Headers.Add(ApiKeyHeaderName, _options.ApiKey);
+        request.Headers.Add("apim-subscription-id", "123");
         var response = await SendRequestWithRetryMechanismAsync(request);
         response.Headers.TryGetValues(OperationLocationHeaderName, out var values);
         var operationLocation = values.FirstOrDefault();
@@ -60,9 +65,11 @@ public class TextAnalytics4HealthClient
 
     public async Task<TextAnlyticsJobResponse> GetHealthcareAnalysisOperationStatusAndResultsAsync(string jobId)
     {
-        var url = $"/language/analyze-text/jobs/{jobId}?api-version={_options.ApiVersion}&top={_options.MaxDocsPerRequest}";
+        var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs/{jobId}?api-version={_options.ApiVersion}&top={_options.MaxDocsPerRequest}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add(ApiKeyHeaderName, _options.ApiKey);
+        request.Headers.Add("apim-subscription-id", "123");
+        request.Headers.Add("Referer", "https://ta-hc.use.dev.api.cog.trafficmanager.net/svc/textanalyticsdispatcher");
         var response = await SendRequestWithRetryMechanismAsync(request);
         var content = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<TextAnlyticsJobResponse>(content);
@@ -108,7 +115,7 @@ public class TextAnalytics4HealthClient
                 _logger.LogWarning("Request to {url} failed with timeout: {message}. next retry in {tryAgainInSeconds}", request.RequestUri, taskCancelledException.Message, tryAgainInSeconds);
                 await Task.Delay(TimeSpan.FromSeconds(tryAgainInSeconds));
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 lastException = ex;
                 _logger.LogError(ex, "Unexpected error");
@@ -116,7 +123,7 @@ public class TextAnalytics4HealthClient
             var newRequest = new HttpRequestMessage(request.Method, request.RequestUri)
             {
                 Content = request.Content,
-                
+
             };
             newRequest.Headers.Add(ApiKeyHeaderName, _options.ApiKey);
             request = newRequest;
