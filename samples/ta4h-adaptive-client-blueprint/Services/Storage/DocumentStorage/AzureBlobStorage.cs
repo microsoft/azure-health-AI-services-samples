@@ -2,16 +2,14 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 public class AzureBlobStorage : IFileStorage
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly BlobContainerClient _containerClient;
-    private readonly JsonSerializerOptions _jsonSerializationOptions;
+    private readonly JsonSerializerSettings _jsonSerializationOptions;
 
     private const string ConstringAuthentication = "ConnectionString";
     private const string AadAuthentication = "AAD";
@@ -34,9 +32,9 @@ public class AzureBlobStorage : IFileStorage
         }
         _containerClient = _blobServiceClient.GetBlobContainerClient(settings.ContainerName);
         _containerClient.CreateIfNotExists();
-        _jsonSerializationOptions = new JsonSerializerOptions
+        _jsonSerializationOptions = new JsonSerializerSettings
         {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            NullValueHandling = NullValueHandling.Ignore
         };
     }
 
@@ -81,7 +79,7 @@ public class AzureBlobStorage : IFileStorage
     public async Task SaveJsonFileAsync<T>(T obj, string blobName)
     {
         var blobClient = _containerClient.GetBlobClient(blobName);
-        var jsonString = JsonSerializer.Serialize(obj, _jsonSerializationOptions);
+        var jsonString = JsonConvert.SerializeObject(obj, _jsonSerializationOptions);
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonString));
         await blobClient.UploadAsync(stream, true);
     }

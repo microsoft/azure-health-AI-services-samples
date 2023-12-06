@@ -1,17 +1,16 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
 
 public class FileSystemStorage : IFileStorage
 {
     private readonly string _rootPath;
-    private readonly JsonSerializerOptions _jsonSerializationOptions;
+    private readonly JsonSerializerSettings _jsonSerializationOptions;
 
     public FileSystemStorage(string rootPath)
     {
         _rootPath = rootPath;
-        _jsonSerializationOptions = new JsonSerializerOptions
+        _jsonSerializationOptions = new JsonSerializerSettings
         {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            NullValueHandling = NullValueHandling.Ignore
         };
     }
 
@@ -42,7 +41,7 @@ public class FileSystemStorage : IFileStorage
     {
         try
         {
-            var jsonString = JsonSerializer.Serialize(obj, _jsonSerializationOptions);
+            var jsonString = JsonConvert.SerializeObject(obj, _jsonSerializationOptions);
             filePath = string.Join(Path.DirectorySeparatorChar, filePath.Split("/"));
             var fullPath = Path.Combine(_rootPath, filePath);
             string directoryName = Path.GetDirectoryName(fullPath);
