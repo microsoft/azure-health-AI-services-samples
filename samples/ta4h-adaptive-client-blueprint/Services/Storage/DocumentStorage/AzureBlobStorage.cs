@@ -3,6 +3,7 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System.Text;
 
 public class AzureBlobStorage : IFileStorage
@@ -34,6 +35,7 @@ public class AzureBlobStorage : IFileStorage
         _containerClient.CreateIfNotExists();
         _jsonSerializationOptions = new JsonSerializerSettings
         {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
     }

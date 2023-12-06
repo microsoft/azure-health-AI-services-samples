@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 public class FileSystemStorage : IFileStorage
 {
@@ -10,6 +11,7 @@ public class FileSystemStorage : IFileStorage
         _rootPath = rootPath;
         _jsonSerializationOptions = new JsonSerializerSettings
         {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
     }
