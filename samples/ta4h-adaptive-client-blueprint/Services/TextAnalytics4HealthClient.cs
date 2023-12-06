@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
@@ -14,15 +13,12 @@ public class TextAnalytics4HealthClient
     private readonly Ta4hOptions _options;
     private readonly Random _jitterer = new Random(DateTime.Now.Millisecond);
 
-    private const string ApiKeyHeaderName = "Ocp-Apim-Subscription-Key";
     private const string OperationLocationHeaderName = "Operation-Location";
 
     public TextAnalytics4HealthClient(ILogger<TextAnalytics4HealthClient> logger, IOptions<Ta4hOptions> options)
     {
         _options = options.Value;
-        var certificate = new X509Certificate2("C:\\Users\\udnaveh\\OneDrive - Microsoft\\certificates\\cluster certificates\\aicp-global-dev-ApimClientCertificate-20230618.pfx", "");
         var handler = new HttpClientHandler();
-        handler.ClientCertificates.Add(certificate);
         _httpClient = new HttpClient(handler);
         _httpClient.BaseAddress = new Uri("https://ta-hc.use.dev.api.cog.trafficmanager.net/");
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
@@ -32,6 +28,15 @@ public class TextAnalytics4HealthClient
     public async Task<string> SendPayloadToProcessingAsync(Ta4hInputPayload payload)
     {
         var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs?api-version={_options.ApiVersion}";
+        object parameters = new { modelVersion = _options.ModelVersion };
+        if (_options.StructureToFhir)
+        {
+            parameters = new { modelVersion = _options.ModelVersion, fhirVersion = "4.0.1" };
+        }
+        if (_options.DocumentType != null)
+        {
+            parameters = new { modelVersion = _options.ModelVersion, fhirVersion = "4.0.1", documentType = _options.DocumentType };
+        }
 
         var requestBody = new
         {
@@ -40,7 +45,7 @@ public class TextAnalytics4HealthClient
                 new
                 {
                     kind = "Healthcare",
-                    parameters = new { modelVersion = _options.ModelVersion }
+                    parameters = parameters
                 }
             },
             analysisInput = new
@@ -54,8 +59,10 @@ public class TextAnalytics4HealthClient
         {
             Content = new StringContent(serializedRequestBody, Encoding.UTF8, "application/json")
         };
-        request.Headers.Add(ApiKeyHeaderName, _options.ApiKey);
-        request.Headers.Add("apim-subscription-id", "123");
+        if (!request.Headers.Contains(_options.ApiKeyHeaderName))
+        {
+            request.Headers.Add(_options.ApiKeyHeaderName, _options.ApiKey);
+        }
         var response = await SendRequestWithRetryMechanismAsync(request);
         response.Headers.TryGetValues(OperationLocationHeaderName, out var values);
         var operationLocation = values.FirstOrDefault();
@@ -65,11 +72,12 @@ public class TextAnalytics4HealthClient
 
     public async Task<TextAnlyticsJobResponse> GetHealthcareAnalysisOperationStatusAndResultsAsync(string jobId)
     {
-        var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs/{jobId}?api-version={_options.ApiVersion}&top={_options.MaxDocsPerRequest}";
+        var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs/{jobId}?api-version={_options.ApiVersion}&top=1";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add(ApiKeyHeaderName, _options.ApiKey);
-        request.Headers.Add("apim-subscription-id", "123");
-        request.Headers.Add("Referer", "https://ta-hc.use.dev.api.cog.trafficmanager.net/svc/textanalyticsdispatcher");
+        if (!request.Headers.Contains(_options.ApiKeyHeaderName))
+        {
+            request.Headers.Add(_options.ApiKeyHeaderName, _options.ApiKey);
+        }
         var response = await SendRequestWithRetryMechanismAsync(request);
         var content = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<TextAnlyticsJobResponse>(content);
@@ -78,10 +86,16 @@ public class TextAnalytics4HealthClient
     private async Task<HttpResponseMessage> SendRequestWithRetryMechanismAsync(HttpRequestMessage request)
     {
         int attemptsCounter = 0;
-        int maxAttemps = 5;
+        int maxAttemps = _options.MaxHttpRetries;
         Exception lastException = null;
+
         while (attemptsCounter < maxAttemps)
         {
+            var additionalHeaders = request.Method == HttpMethod.Post ? _options.AdditionalPostHeaders : _options.AdditionalGetHeaders;
+            foreach ((string header, string headerValue) in additionalHeaders)
+            {
+                request.Headers.Add(header, headerValue);
+            }
             try
             {
                 if (attemptsCounter > 0)
@@ -123,9 +137,8 @@ public class TextAnalytics4HealthClient
             var newRequest = new HttpRequestMessage(request.Method, request.RequestUri)
             {
                 Content = request.Content,
-
             };
-            newRequest.Headers.Add(ApiKeyHeaderName, _options.ApiKey);
+            newRequest.Headers.Add(_options.ApiKeyHeaderName, _options.ApiKey);
             request = newRequest;
         }
         throw lastException;

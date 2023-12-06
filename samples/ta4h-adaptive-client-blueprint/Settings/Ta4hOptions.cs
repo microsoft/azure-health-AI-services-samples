@@ -10,10 +10,21 @@
     /// </summary>
     public string ApiKey { get; set; }
 
+    public string ApiKeyHeaderName { get; set; } = "Ocp-Apim-Subscription-Key";
+
+    public Dictionary<string,string> AdditionalGetHeaders { get; set; } = new Dictionary<string,string>();
+
+    public Dictionary<string, string> AdditionalPostHeaders { get; set; } = new Dictionary<string, string>();
+
+
     /// <summary>
     /// Text Analytics for Health Model Version to use. e.g. "2023-04-01", "2023-04-15-preview", "2022-03-01"
     /// </summary>
     public string ModelVersion { get; set; } = "latest";
+
+    public bool StructureToFhir { get; set; } = false;
+
+    public string DocumentType { get; set; }
 
     /// <summary>
     /// Language API api verison to use.
@@ -41,6 +52,8 @@
     /// If true, the number of documents for each request will be a random value smaller or equal to MaxDocsPerRequest.
     /// </summary>
     public bool RandomizeRequestSize { get; set; } = false;
+
+    public int MaxHttpRetries { get; set; } = 5;
 
 
 }
