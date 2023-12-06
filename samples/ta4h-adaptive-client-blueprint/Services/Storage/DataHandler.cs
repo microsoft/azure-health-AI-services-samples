@@ -87,13 +87,24 @@ public class DataHandler : IDataHandler
     {
         try
         {
-            var resultsStored = await BatchProcessor.ProcessInBatchesAsync(
+            if (results.Errors.Any())
+            {
+                foreach (var error in results.Errors)
+                {
+                    var docMetadata = payload.DocumentsMetadata.First(d => d.DocumentId == error.Id);
+                    await _outputFileStorage.SaveJsonFileAsync(error, docMetadata.ResultsPath.Replace(".json", ".error.json"));
+                }
+            }
+            if (results.Documents.Any()) 
+            {
+                var resultsStored = await BatchProcessor.ProcessInBatchesAsync(
                 results.Documents, results.Documents.Count > 10 ? 10 : results.Documents.Count, async (doc) =>
                 {
                     var docMetadata = payload.DocumentsMetadata.First(d => d.DocumentId == doc.Id);
                     await _outputFileStorage.SaveJsonFileAsync(doc, docMetadata.ResultsPath);
                     return docMetadata.ResultsPath;
                 });
+            }
         }
         catch (AggregateException ae)
         {
