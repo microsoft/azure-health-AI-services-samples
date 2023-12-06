@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using TextAnalyticsHealthcareAdaptiveClient.TextAnalyticsApiSchema;
 
@@ -19,15 +20,20 @@ public class TextAnalytics4HealthClient
     {
         _options = options.Value;
         var handler = new HttpClientHandler();
+        if (_options.ClientCertificatePath != null)
+        {
+            var certificate = new X509Certificate2(_options.ClientCertificatePath, "");
+            handler.ClientCertificates.Add(certificate);
+        }
         _httpClient = new HttpClient(handler);
-        _httpClient.BaseAddress = new Uri("https://ta-hc.use.dev.api.cog.trafficmanager.net/");
+        _httpClient.BaseAddress = new Uri(_options.Endpoint);
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
         _logger = logger;
     }
 
     public async Task<string> SendPayloadToProcessingAsync(Ta4hInputPayload payload)
     {
-        var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs?api-version={_options.ApiVersion}";
+        var url = CreateUrl();
         object parameters = new { modelVersion = _options.ModelVersion };
         if (_options.StructureToFhir)
         {
@@ -72,7 +78,7 @@ public class TextAnalytics4HealthClient
 
     public async Task<TextAnlyticsJobResponse> GetHealthcareAnalysisOperationStatusAndResultsAsync(string jobId)
     {
-        var url = $"/svc/textanalyticsdispatcher/language/analyze-text/jobs/{jobId}?api-version={_options.ApiVersion}&top=1";
+        string url = CreateUrl(jobId);
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (!request.Headers.Contains(_options.ApiKeyHeaderName))
         {
@@ -81,6 +87,18 @@ public class TextAnalytics4HealthClient
         var response = await SendRequestWithRetryMechanismAsync(request);
         var content = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<TextAnlyticsJobResponse>(content);
+    }
+
+    private string CreateUrl(string jobId=null)
+    {
+        if (jobId == null)
+        {
+            return $"{_options.UrlPrefix}/language/analyze-text/jobs?api-version={_options.ApiVersion}";
+        }
+        else
+        {
+            return $"{_options.UrlPrefix}/language/analyze-text/jobs/{jobId}?api-version={_options.ApiVersion}";
+        }
     }
 
     private async Task<HttpResponseMessage> SendRequestWithRetryMechanismAsync(HttpRequestMessage request)

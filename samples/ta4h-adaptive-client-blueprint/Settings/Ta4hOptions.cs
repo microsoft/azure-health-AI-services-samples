@@ -10,12 +10,6 @@
     /// </summary>
     public string ApiKey { get; set; }
 
-    public string ApiKeyHeaderName { get; set; } = "Ocp-Apim-Subscription-Key";
-
-    public Dictionary<string,string> AdditionalGetHeaders { get; set; } = new Dictionary<string,string>();
-
-    public Dictionary<string, string> AdditionalPostHeaders { get; set; } = new Dictionary<string, string>();
-
 
     /// <summary>
     /// Text Analytics for Health Model Version to use. e.g. "2023-04-01", "2023-04-15-preview", "2022-03-01"
@@ -53,7 +47,23 @@
     /// </summary>
     public bool RandomizeRequestSize { get; set; } = false;
 
+    /// <summary>
+    /// Number of times to try an http call in case of http errors
+    /// </summary>
     public int MaxHttpRetries { get; set; } = 5;
+
+
+    // dev-only properties
+
+    public string UrlPrefix { get; set; } = "";
+
+    public string ApiKeyHeaderName { get; set; } = "Ocp-Apim-Subscription-Key";
+
+    public Dictionary<string, string> AdditionalGetHeaders { get; set; } = new Dictionary<string, string>();
+
+    public Dictionary<string, string> AdditionalPostHeaders { get; set; } = new Dictionary<string, string>();
+
+    public string ClientCertificatePath { get; set; } = null;
 
 
 }
