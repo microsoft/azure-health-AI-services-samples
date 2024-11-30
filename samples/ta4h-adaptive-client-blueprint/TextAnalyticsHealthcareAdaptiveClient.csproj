@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,7 +13,7 @@
 
 <ItemGroup>
 	<PackageReference Include="Azure.Data.Tables" Version="12.8.0" />
-	<PackageReference Include="Azure.Identity" Version="1.9.0" />
+	<PackageReference Include="Azure.Identity" Version="1.10.2" />
 	<PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
 	<PackageReference Include="Azure.Storage.Files.DataLake" Version="12.14.0" />
 	<PackageReference Include="Azure.Storage.Files.Shares" Version="12.14.0" />
